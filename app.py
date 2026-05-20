@@ -14,29 +14,32 @@ except ImportError:
     st.stop()
 
 # ================= 1. KONFIGURASI & TEMA =================
-st.set_page_config(page_title="Executive Analytics", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Executive Analytics Command Center", layout="wide", initial_sidebar_state="expanded")
 
-# CSS Elite Corporate: Label dipergelap agar kontras maksimal
+# CSS Elite Corporate: Optimasi Kontras Tinggi & Penegasan Batas Komponen
 st.markdown("""
     <style>
+    /* Mengubah background dasar aplikasi agar kartu putih lebih stand-out */
     .stApp {
-        background-color: #f8fafc;
+        background-color: #f1f5f9;
     }
+    
+    /* Desain Kartu Metrik dengan Kontras Tinggi */
     .metric-card {
         background-color: #ffffff;
-        border: 1px solid #e2e8f0;
+        border: 1px solid #cbd5e1;
         padding: 24px;
         border-radius: 12px;
-        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         text-align: center;
         transition: all 0.3s ease;
     }
     .metric-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
     }
     .metric-title {
-        color: #0f172a; /* Warna gelap / hitam */
+        color: #0f172a; /* Hitam pekat */
         font-size: 13px;
         font-weight: 700;
         letter-spacing: 1px;
@@ -44,59 +47,60 @@ st.markdown("""
         margin-bottom: 12px;
     }
     .metric-value {
-        color: #0f172a; /* Warna gelap / hitam */
-        font-size: 34px;
-        font-weight: 900;
+        color: #1e3a8a; /* Deep Royal Blue */
+        font-size: 36px;
+        font-weight: 800;
         font-family: 'Helvetica Neue', sans-serif;
     }
+    
+    /* Navigasi Tab Profesional */
     .stTabs [data-baseweb="tab-list"] {
-        gap: 32px;
-        border-bottom: 1px solid #cbd5e1;
+        gap: 24px;
+        border-bottom: 2px solid #cbd5e1;
+        background-color: #ffffff;
+        padding: 8px 16px 0px 16px;
+        border-radius: 8px 8px 0 0;
     }
     .stTabs [data-baseweb="tab"] {
-        height: 54px;
+        height: 48px;
         background-color: transparent;
-        border-radius: 0;
-        padding-top: 12px;
-        padding-bottom: 12px;
-        color: #334155; /* Abu-abu gelap */
+        color: #475569;
         font-weight: 600;
+        font-size: 14px;
     }
     .stTabs [aria-selected="true"] {
-        color: #0f172a !important; /* Hitam pekat saat dipilih */
-        border-bottom: 3px solid #0f172a !important;
+        color: #0f172a !important;
+        border-bottom: 3px solid #1e3a8a !important;
         font-weight: 800;
-        background-color: transparent !important;
     }
-    h1, h2, h3, h4, p, span, div {
-        color: #0f172a; /* Memaksa teks header hitam */
+    
+    /* Memaksa Semua Teks Pendukung Berwarna Gelap */
+    h1, h2, h3, h4, p, span, div, label {
+        color: #0f172a !important;
         font-family: 'Helvetica Neue', sans-serif;
-    }
-    hr {
-        border-color: #cbd5e1;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Palet Warna
+# Palet Warna Solid Premium (Bebas Warna Nyaru)
 nps_colors = {
-    'Promoter': '#059669', 
-    'Passive': '#94a3b8',  
-    'Detractor': '#e11d48' 
+    'Promoter': '#047857',  # Emerald Dark
+    'Passive': '#64748b',   # Slate Dark
+    'Detractor': '#b91c1c'  # Crimson Dark
 }
-primary_color = '#1e293b'   
-secondary_color = '#0284c7' 
+color_blue_solid = '#2563eb'   # Royal Blue Terang & Jelas
+color_navy_solid = '#0f172a'   # Midnight Navy
 
-# Fungsi layout dengan font HITAM PEKAT
+# Fungsi Standarisasi Grafik dengan Label Hitam Pekat & Gridlines Jelas
 def elite_layout(fig, title=""):
     fig.update_layout(
-        title=dict(text=title, font=dict(size=18, color='#0f172a', family='Helvetica Neue', weight='bold')),
+        title=dict(text=title, font=dict(size=16, color='#0f172a', family='Helvetica Neue', weight='bold')),
         template="plotly_white",
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=60, b=20, l=20, r=20),
-        font=dict(color='#0f172a', size=13, weight='bold'), # FONT HITAM GELAP
-        hoverlabel=dict(bgcolor="white", font_size=13, font_family="Helvetica Neue", font_color="#0f172a")
+        margin=dict(t=60, b=40, l=40, r=40),
+        font=dict(color='#0f172a', size=12, weight='bold'), # Memaksa seluruh label berwarna hitam pekat
+        hoverlabel=dict(bgcolor="#0f172a", font_size=13, font_family="Helvetica Neue", font_color="white")
     )
     fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#e2e8f0', zeroline=False, title_font=dict(color='#0f172a', weight='bold'), tickfont=dict(color='#0f172a', weight='bold'))
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#e2e8f0', zeroline=False, title_font=dict(color='#0f172a', weight='bold'), tickfont=dict(color='#0f172a', weight='bold'))
@@ -133,7 +137,7 @@ services = ['Registration', 'Doctor Consultation', 'Nurse Service', 'Pharmacy Se
             'Staff Friendliness', 'Waiting Time']
 
 # ================= 3. SIDEBAR & FILTER =================
-st.sidebar.markdown("<h3 style='color: #0f172a;'>Parameter Analisis</h3>", unsafe_allow_html=True)
+st.sidebar.markdown("<h3 style='color: #0f172a; font-weight: bold;'>Parameter Analisis</h3>", unsafe_allow_html=True)
 st.sidebar.markdown("---")
 min_date, max_date = df['Date'].min(), df['Date'].max()
 selected_dates = st.sidebar.date_input("Rentang Waktu", [min_date, max_date], min_value=min_date, max_value=max_date)
@@ -148,7 +152,7 @@ if selected_branch != "Semua Cabang":
 if selected_gender != "Semua":
     df_filtered = df_filtered[df_filtered['Gender'] == selected_gender]
 
-st.markdown("<h2 style='text-align: center; margin-bottom: 40px; color: #0f172a;'>Executive Command Center</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center; margin-bottom: 40px; color: #0f172a; font-weight: bold;'>Executive Command Center</h2>", unsafe_allow_html=True)
 
 if df_filtered.empty:
     st.warning("Data tidak tersedia untuk kombinasi filter yang dipilih.")
@@ -170,34 +174,37 @@ with tab1:
     col2.markdown(f"<div class='metric-card'><div class='metric-title'>Net Promoter Score</div><div class='metric-value'>{df_filtered['NPS'].mean():.1f}</div></div>", unsafe_allow_html=True)
     col3.markdown(f"<div class='metric-card'><div class='metric-title'>Indeks Kepuasan</div><div class='metric-value'>{df_filtered['CSI'].mean():.2f}</div></div>", unsafe_allow_html=True)
     col4.markdown(f"<div class='metric-card'><div class='metric-title'>Tingkat Loyalitas</div><div class='metric-value'>{(len(df_filtered[df_filtered['NPS_Category'] == 'Promoter']) / len(df_filtered)) * 100:.1f}%</div></div>", unsafe_allow_html=True)
-    st.markdown("<br><br>", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
 
     t1_r1_c1, t1_r1_c2 = st.columns([2.5, 1.5])
     with t1_r1_c1:
         trend_data = df_filtered.groupby('Date').agg(Total=('NPS', 'count'), NPS_Avg=('NPS', 'mean')).reset_index()
         fig_trend = go.Figure()
-        fig_trend.add_trace(go.Bar(x=trend_data['Date'], y=trend_data['Total'], name='Volume Kunjungan', marker_color='#cbd5e1', yaxis='y1'))
-        fig_trend.add_trace(go.Scatter(x=trend_data['Date'], y=trend_data['NPS_Avg'], name='NPS Rata-rata', mode='lines+markers', line=dict(color=primary_color, width=3), yaxis='y2'))
+        # Mengubah warna bar kunjungan menjadi biru yang sangat jelas terlihat (tidak samar lagi)
+        fig_trend.add_trace(go.Bar(x=trend_data['Date'], y=trend_data['Total'], name='Volume Kunjungan', marker_color='#93c5fd', yaxis='y1'))
+        fig_trend.add_trace(go.Scatter(x=trend_data['Date'], y=trend_data['NPS_Avg'], name='NPS Rata-rata', mode='lines+markers', line=dict(color=color_navy_solid, width=3), yaxis='y2'))
         fig_trend = elite_layout(fig_trend, "Dinamika Kunjungan & Skor Kepuasan Operasional")
         fig_trend.update_layout(yaxis=dict(title='Volume Pasien', showgrid=False), yaxis2=dict(title='Skor NPS', overlaying='y', side='right', range=[0, 10], showgrid=False))
         st.plotly_chart(fig_trend, use_container_width=True)
     with t1_r1_c2:
         nps_counts = df_filtered['NPS_Category'].value_counts().reset_index()
-        fig_donut = px.pie(nps_counts, values='count', names='NPS_Category', hole=0.7, color='NPS_Category', color_discrete_map=nps_colors)
+        # Memberikan outline hitam tipis pada Donut Chart agar batas antar warna terlihat absolut
+        fig_donut = px.pie(nps_counts, values='count', names='NPS_Category', hole=0.65, color='NPS_Category', color_discrete_map=nps_colors)
         fig_donut = elite_layout(fig_donut, "Distribusi Segmen Pelanggan")
-        fig_donut.update_traces(textposition='outside', textinfo='percent+label', hoverinfo='label+value+percent')
+        fig_donut.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#0f172a', width=1)))
         fig_donut.update_layout(showlegend=False) 
         st.plotly_chart(fig_donut, use_container_width=True)
 
     t1_r2_c1, t1_r2_c2 = st.columns([1.5, 2.5])
     with t1_r2_c1:
         branch_nps = df_filtered.groupby('Branch')['NPS'].mean().sort_values(ascending=True).reset_index()
-        fig_lead = px.bar(branch_nps, x='NPS', y='Branch', orientation='h', color='NPS', color_continuous_scale='Teal')
+        # Menggunakan warna solid Navy pekat agar tidak ada batang yang terlihat samar
+        fig_lead = px.bar(branch_nps, x='NPS', y='Branch', orientation='h', color_discrete_sequence=[color_navy_solid])
         fig_lead = elite_layout(fig_lead, "Peringkat Kinerja Fasilitas")
-        fig_lead.update_layout(coloraxis_showscale=False)
         st.plotly_chart(fig_lead, use_container_width=True)
     with t1_r2_c2:
-        fig_tree = px.treemap(df_filtered, path=[px.Constant("Semua Pasien"), 'Branch', 'Gender', 'NPS_Category'], color='NPS', color_continuous_scale='Teal')
+        # Menggunakan Viridis yang terkenal memiliki kontras sangat tinggi di atas putih murni
+        fig_tree = px.treemap(df_filtered, path=[px.Constant("Semua Pasien"), 'Branch', 'Gender', 'NPS_Category'], color='NPS', color_continuous_scale='Viridis')
         fig_tree = elite_layout(fig_tree, "Peta Hierarki Demografi & Sentimen")
         st.plotly_chart(fig_tree, use_container_width=True)
 
@@ -208,33 +215,35 @@ with tab2:
         service_means = df_filtered[services].mean().reset_index()
         service_means.columns = ['Layanan', 'Skor']
         fig_radar = px.line_polar(service_means, r='Skor', theta='Layanan', line_close=True)
-        fig_radar.update_traces(fill='toself', line_color=secondary_color, fillcolor='rgba(2, 132, 199, 0.15)', line_width=2)
+        fig_radar.update_traces(fill='toself', line_color=color_blue_solid, fillcolor='rgba(37, 99, 235, 0.15)', line_width=2.5)
         fig_radar = elite_layout(fig_radar, "Spektrum Kinerja Layanan")
         fig_radar.update_layout(polar=dict(radialaxis=dict(range=[1, 5], gridcolor='#cbd5e1'), angularaxis=dict(gridcolor='#cbd5e1')))
         st.plotly_chart(fig_radar, use_container_width=True)
     with t2_r1_c2:
         corr_data = df_filtered[services + ['NPS']].corr()['NPS'].drop('NPS').sort_values(ascending=True)
-        fig_driver = px.bar(corr_data, orientation='h', color=corr_data.values, color_continuous_scale='Blues')
+        # Bar chart driver diubah menjadi warna biru solid berkinerja tinggi
+        fig_driver = px.bar(corr_data, orientation='h', color_discrete_sequence=[color_blue_solid])
         fig_driver = elite_layout(fig_driver, "Faktor Pendorong Kepuasan")
-        fig_driver.update_layout(xaxis_title="Koefisien Korelasi", coloraxis_showscale=False)
+        fig_driver.update_layout(xaxis_title="Koefisien Korelasi")
         st.plotly_chart(fig_driver, use_container_width=True)
 
     heatmap_data = df_filtered.groupby('Branch')[services].mean()
-    fig_heat = px.imshow(heatmap_data.T, color_continuous_scale='Teal', text_auto=".1f", aspect="auto")
-    fig_heat = elite_layout(fig_heat, "Matriks Panas: Evaluasi Layanan")
+    # Menggunakan skala kontras tinggi RdYlGn (Merah-Kuning-Hijau korporat) agar area kritis langsung terlihat mencolok
+    fig_heat = px.imshow(heatmap_data.T, color_continuous_scale='RdYlGn', text_auto=".1f", aspect="auto")
+    fig_heat = elite_layout(fig_heat, "Matriks Kinerja Evaluasi Unit Layanan")
     st.plotly_chart(fig_heat, use_container_width=True)
 
     t2_r3_c1, t2_r3_c2 = st.columns(2)
     with t2_r3_c1:
-        fig_box = px.box(df_filtered, x='Branch', y='Waiting Time', color='Branch', color_discrete_sequence=px.colors.qualitative.Prism)
+        fig_box = px.box(df_filtered, x='Branch', y='Waiting Time', color='Branch', color_discrete_sequence=px.colors.qualitative.Dark20)
         fig_box = elite_layout(fig_box, "Distribusi Waktu Tunggu")
         fig_box.update_layout(showlegend=False)
         st.plotly_chart(fig_box, use_container_width=True)
     with t2_r3_c2:
         doc_nurse = df_filtered.groupby('Branch')[['Doctor Consultation', 'Nurse Service']].mean().reset_index()
         fig_dn = go.Figure(data=[
-            go.Bar(name='Konsultasi Dokter', x=doc_nurse['Branch'], y=doc_nurse['Doctor Consultation'], marker_color=primary_color),
-            go.Bar(name='Layanan Perawat', x=doc_nurse['Branch'], y=doc_nurse['Nurse Service'], marker_color=secondary_color)
+            go.Bar(name='Konsultasi Dokter', x=doc_nurse['Branch'], y=doc_nurse['Doctor Consultation'], marker_color=color_navy_solid),
+            go.Bar(name='Layanan Perawat', x=doc_nurse['Branch'], y=doc_nurse['Nurse Service'], marker_color=color_blue_solid)
         ])
         fig_dn = elite_layout(fig_dn, "Komparasi Evaluasi Medis")
         fig_dn.update_layout(barmode='group', yaxis=dict(range=[1, 5]))
@@ -245,23 +254,25 @@ with tab3:
     t3_r1_c1, t3_r1_c2 = st.columns([1.5, 1])
     with t3_r1_c1:
         bubble_data = df_filtered.groupby('Branch').agg(CSI=('CSI', 'mean'), Loyalty=('Loyalty', 'mean'), CES=('CES', 'mean')).reset_index()
-        fig_bub = px.scatter(bubble_data, x="CSI", y="Loyalty", size="CES", color="Branch", hover_name="Branch", size_max=35, color_discrete_sequence=px.colors.qualitative.Safe)
+        fig_bub = px.scatter(bubble_data, x="CSI", y="Loyalty", size="CES", color="Branch", hover_name="Branch", size_max=35, color_discrete_sequence=px.colors.qualitative.Dark24)
         fig_bub = elite_layout(fig_bub, "Matriks Kuadran (Kepuasan vs Retensi)")
+        # Memberikan border hitam pada lingkaran gelembung agar tidak menyatu dengan background putih
+        fig_bub.update_traces(marker=dict(line=dict(width=1.5, color='#0f172a')))
         fig_bub.add_vline(x=bubble_data['CSI'].mean(), line_dash="dash", line_color="#0f172a", line_width=2)
         fig_bub.add_hline(y=bubble_data['Loyalty'].mean(), line_dash="dash", line_color="#0f172a", line_width=2)
         st.plotly_chart(fig_bub, use_container_width=True)
     with t3_r1_c2:
         macro_corr = df_filtered[['NPS', 'CSI', 'Loyalty', 'CES']].corr()
-        fig_mcorr = px.imshow(macro_corr, text_auto=".2f", color_continuous_scale='Blues')
+        fig_mcorr = px.imshow(macro_corr, text_auto=".2f", color_continuous_scale='Cividis')
         fig_mcorr = elite_layout(fig_mcorr, "Korelasi Indikator Makro")
         st.plotly_chart(fig_mcorr, use_container_width=True)
 
     t3_r2_c1, t3_r2_c2, t3_r2_c3 = st.columns(3)
     with t3_r2_c1:
         age_loyalty = df_filtered.groupby('Age_Group')['Loyalty'].mean().reset_index()
-        fig_al = px.bar(age_loyalty, x='Age_Group', y='Loyalty', color='Loyalty', color_continuous_scale='Blues')
+        fig_al = px.bar(age_loyalty, x='Age_Group', y='Loyalty', color_discrete_sequence=[color_blue_solid])
         fig_al = elite_layout(fig_al, "Retensi Berdasarkan Generasi")
-        fig_al.update_layout(coloraxis_showscale=False, yaxis=dict(range=[1, 5]))
+        fig_al.update_layout(yaxis=dict(range=[1, 5]))
         st.plotly_chart(fig_al, use_container_width=True)
     with t3_r2_c2:
         fig_ces = px.histogram(df_filtered, x='CES', color='NPS_Category', barmode='group', color_discrete_map=nps_colors)
@@ -269,9 +280,9 @@ with tab3:
         st.plotly_chart(fig_ces, use_container_width=True)
     with t3_r2_c3:
         trend_loyalty = df_filtered.groupby('Date')['Loyalty'].mean().reset_index()
-        # [MEMPERBAIKI ERROR TYPEERROR DI SINI]
+        # PERBAIKAN UTAMA: Penerapan penyesuaian warna garis yang aman dari error koordinat Plotly Express
         fig_tl = px.line(trend_loyalty, x='Date', y='Loyalty', markers=True, line_shape='spline')
-        fig_tl.update_traces(line=dict(color=secondary_color, width=3))
+        fig_tl.update_traces(line=dict(color=color_blue_solid, width=3))
         fig_tl = elite_layout(fig_tl, "Tren Retensi & Loyalitas")
         fig_tl.update_layout(yaxis=dict(range=[1, 5]))
         st.plotly_chart(fig_tl, use_container_width=True)
@@ -281,9 +292,9 @@ with tab4:
     t4_r1_c1, t4_r1_c2 = st.columns([1, 1])
     with t4_r1_c1:
         hour_nps = df_filtered.groupby('Hour')['NPS'].mean().reset_index()
-        # [MEMPERBAIKI ERROR TYPEERROR DI SINI JUGA]
+        # PERBAIKAN UTAMA: Pemisahan argument modifikasi garis yang bebas dari redaction error
         fig_hour = px.line(hour_nps, x='Hour', y='NPS', markers=True, line_shape='spline')
-        fig_hour.update_traces(line=dict(color=primary_color, width=3))
+        fig_hour.update_traces(line=dict(color=color_navy_solid, width=3))
         fig_hour = elite_layout(fig_hour, "Fluktuasi Sentimen Berdasarkan Jam")
         fig_hour.update_layout(xaxis=dict(tickmode='linear', tick0=0, dtick=2))
         st.plotly_chart(fig_hour, use_container_width=True)
@@ -323,11 +334,11 @@ with tab5:
             
             with t5_r1_c1:
                 st.markdown("<p style='font-weight: 700; color: #0f172a; font-size: 14px; text-transform: uppercase;'>Pemetaan Leksikal (Global)</p>", unsafe_allow_html=True)
-                wordcloud_all = WordCloud(width=800, height=500, background_color='#f8fafc', colormap='ocean', max_words=100, contour_width=0).generate(all_text)
+                wordcloud_all = WordCloud(width=800, height=500, background_color='#ffffff', colormap='ocean', max_words=100, contour_width=1, contour_color='#cbd5e1').generate(all_text)
                 fig_wc_all, ax_all = plt.subplots(figsize=(8, 5))
                 ax_all.imshow(wordcloud_all, interpolation='bilinear')
                 ax_all.axis('off')
-                fig_wc_all.patch.set_facecolor('#f8fafc')
+                fig_wc_all.patch.set_facecolor('#ffffff')
                 st.pyplot(fig_wc_all)
                 
             with t5_r1_c2:
@@ -335,11 +346,11 @@ with tab5:
                 detractor_text = " ".join(df_filtered[df_filtered['NPS_Category'] == 'Detractor']['Improvement_Feedback'].dropna().astype(str).tolist()).lower()
                 
                 if len(detractor_text.strip()) > 0:
-                    wordcloud_det = WordCloud(width=800, height=500, background_color='#f8fafc', colormap='Reds', max_words=100).generate(detractor_text)
+                    wordcloud_det = WordCloud(width=800, height=500, background_color='#ffffff', colormap='Reds', max_words=100, contour_width=1, contour_color='#cbd5e1').generate(detractor_text)
                     fig_wc_det, ax_det = plt.subplots(figsize=(8, 5))
                     ax_det.imshow(wordcloud_det, interpolation='bilinear')
                     ax_det.axis('off')
-                    fig_wc_det.patch.set_facecolor('#f8fafc')
+                    fig_wc_det.patch.set_facecolor('#ffffff')
                     st.pyplot(fig_wc_det)
                 else:
                     st.info("Insufisiensi data kualitatif pada segmen kritis untuk dilakukan pemetaan.")
@@ -353,13 +364,13 @@ with tab5:
                 df_words = pd.DataFrame(word_counts, columns=['Terminologi', 'Frekuensi Aktual'])
                 df_words = df_words.sort_values(by='Frekuensi Aktual', ascending=True)
                 
+                # Mengubah diagram batang kata menjadi warna solid Navy agar terbaca sempurna
                 fig_bar_words = px.bar(
                     df_words, x='Frekuensi Aktual', y='Terminologi', orientation='h',
-                    color='Frekuensi Aktual', color_continuous_scale='Teal', text='Frekuensi Aktual'
+                    text='Frekuensi Aktual', color_discrete_sequence=[color_navy_solid]
                 )
                 fig_bar_words = elite_layout(fig_bar_words, "Distribusi Terminologi Teratas")
                 fig_bar_words.update_traces(textposition='outside')
-                fig_bar_words.update_layout(coloraxis_showscale=False)
                 st.plotly_chart(fig_bar_words, use_container_width=True)
             else:
                 st.info("Kuantitas data teks tidak mencukupi untuk ekstraksi analitik.")
