@@ -4,12 +4,13 @@ import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
 
-# Mengimpor library Machine Learning dengan penanganan error
+# Mengimpor library Machine Learning & PCA
 try:
     from sklearn.cluster import KMeans
     from sklearn.preprocessing import StandardScaler
+    from sklearn.decomposition import PCA
 except ImportError:
-    st.error("⚠️ Library 'scikit-learn' belum terinstal. Tolong tambahkan 'scikit-learn' ke file requirements.txt Anda di GitHub!")
+    st.error("⚠️ Library 'scikit-learn' belum terinstal. Tambahkan di requirements.txt!")
     st.stop()
 
 # ================= 1. KONFIGURASI & TEMA =================
@@ -76,8 +77,8 @@ if df_filtered.empty:
     st.warning("Data kosong untuk filter ini.")
     st.stop()
 
-# ================= 4. TABS (SEKARANG ADA 5 TABS!) =================
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Executive Summary", "🔍 Service Deep Dive", "❤️ Loyalty & Retention", "💬 Voice of Customer (VOC)", "🤖 Advanced AI (Clustering)"])
+# ================= 4. TABS =================
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Executive Summary", "🔍 Service Deep Dive", "❤️ Loyalty & Retention", "💬 Voice of Customer (VOC)", "🤖 Advanced AI (PCA & Clustering)"])
 
 # ----------------- TAB 1: EXECUTIVE SUMMARY -----------------
 with tab1:
@@ -198,25 +199,39 @@ with tab4:
     fig_stack = px.histogram(df_filtered, y="Branch", color="NPS_Category", orientation='h', title="4. Distribusi Sentimen per Cabang", color_discrete_map={'Promoter':'#28a745', 'Passive':'#ffc107', 'Detractor':'#dc3545'})
     st.plotly_chart(fig_stack, use_container_width=True)
 
-# ----------------- TAB 5: ADVANCED AI (CLUSTERING) -----------------
+# ----------------- TAB 5: ADVANCED AI (PCA & CLUSTERING) -----------------
 with tab5:
-    st.markdown("### 🤖 Segmentasi Persona Pasien berbasis AI (K-Means Clustering)")
-    st.info("Algoritma AI secara otomatis mengelompokkan pasien berdasarkan pola kepuasan, loyalitas, dan waktu tunggu tanpa campur tangan manusia.")
+    st.markdown("### 🤖 Segmentasi Persona Pasien berbasis AI (K-Means & PCA)")
+    st.info("AI secara otomatis mengelompokkan pasien berdasarkan seluruh matriks layanan, lalu dimensinya direduksi menggunakan PCA agar bisa dipetakan secara 2D tanpa kehilangan makna analitis.")
     
-    # Menyiapkan data untuk clustering
-    features = ['CSI', 'Loyalty', 'Waiting Time']
-    if len(df_filtered) > 10: # Butuh minimal data untuk clustering
-        X = df_filtered[features].dropna()
+    # Memasukkan semua fitur metrik utama agar clustering dan PCA lebih kaya
+    features_ai = ['CSI', 'Loyalty', 'Waiting Time'] + services
+    
+    if len(df_filtered) > 10: 
+        X = df_filtered[features_ai].dropna()
         
-        # Standarisasi data agar skala sama
+        # 1. Standarisasi Data
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X)
         
-        # Menjalankan K-Means Clustering (K=3)
+        # 2. Menjalankan K-Means Clustering
         kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-        df_filtered.loc[X.index, 'Cluster'] = kmeans.fit_predict(X_scaled)
+        clusters = kmeans.fit_predict(X_scaled)
         
-        # Memberi nama persona berdasarkan karakteristik skor
+        # 3. Menjalankan PCA (Reduksi ke 2 Dimensi)
+        pca = PCA(n_components=2)
+        pca_components = pca.fit_transform(X_scaled)
+        
+        # 4. Menghitung Persentase Keragaman (Explained Variance)
+        var_pc1 = pca.explained_variance_ratio_[0] * 100
+        var_pc2 = pca.explained_variance_ratio_[1] * 100
+        total_variance = var_pc1 + var_pc2
+        
+        # Menyimpan hasil ke DataFrame
+        df_filtered.loc[X.index, 'Cluster'] = clusters
+        df_filtered.loc[X.index, 'PC1'] = pca_components[:, 0]
+        df_filtered.loc[X.index, 'PC2'] = pca_components[:, 1]
+        
         df_filtered['Persona'] = df_filtered['Cluster'].map({
             0: "Segmen A (Persona 1)", 
             1: "Segmen B (Persona 2)", 
@@ -225,21 +240,27 @@ with tab5:
 
         t5_r1_c1, t5_r1_c2 = st.columns([1.5, 1])
         with t5_r1_c1:
-            # 1. Visualisasi 3D Scatter Plot (Sangat Pro!)
-            fig_cluster = px.scatter_3d(
-                df_filtered, x='Waiting Time', y='CSI', z='Loyalty',
-                color='Persona', opacity=0.8,
-                title="1. Peta 3D Segmentasi Pasien",
+            # Visualisasi 2D Scatter Plot dengan Info Keragaman
+            fig_pca = px.scatter(
+                df_filtered.loc[X.index], x='PC1', y='PC2', color='Persona',
+                opacity=0.8,
+                title=f"1. Peta 2D Segmen Pasien (Total Keragaman: {total_variance:.1f}%)",
+                labels={
+                    'PC1': f'Principal Component 1 ({var_pc1:.1f}%)',
+                    'PC2': f'Principal Component 2 ({var_pc2:.1f}%)'
+                },
+                hover_data=['Branch', 'Age', 'NPS'],
                 color_discrete_sequence=px.colors.qualitative.Pastel
             )
-            fig_cluster.update_layout(margin=dict(l=0, r=0, b=0, t=40))
-            st.plotly_chart(fig_cluster, use_container_width=True)
+            fig_pca.update_layout(margin=dict(l=0, r=0, b=0, t=40))
+            st.plotly_chart(fig_pca, use_container_width=True)
             
         with t5_r1_c2:
-            # 2. Karakteristik Profil tiap Segmen
-            cluster_profile = df_filtered.groupby('Persona')[features].mean().reset_index()
-            # Melt data untuk radar chart
-            melted_profile = pd.melt(cluster_profile, id_vars=['Persona'], value_vars=features)
+            # Karakteristik Profil tiap Segmen (Ambil 5 fitur utama saja untuk Radar Chart)
+            top_features = ['CSI', 'Loyalty', 'Waiting Time', 'Doctor Consultation', 'Nurse Service']
+            cluster_profile = df_filtered.loc[X.index].groupby('Persona')[top_features].mean().reset_index()
+            
+            melted_profile = pd.melt(cluster_profile, id_vars=['Persona'], value_vars=top_features)
             
             fig_radar_ai = px.line_polar(
                 melted_profile, r='value', theta='variable', color='Persona',
@@ -250,13 +271,12 @@ with tab5:
             st.plotly_chart(fig_radar_ai, use_container_width=True)
 
     else:
-        st.warning("⚠️ Data terlalu sedikit untuk dianalisis oleh AI. Tolong perlebar rentang waktu filter Anda.")
+        st.warning("⚠️ Data terlalu sedikit untuk dianalisis oleh AI.")
 
     st.markdown("---")
     st.markdown("### 📊 Analisis Inkonsistensi (Bottleneck) Layanan")
     st.caption("Semakin tinggi tiang diagram (Standard Deviation), semakin **TIDAK KONSISTEN** layanan tersebut (kadang sangat bagus, kadang sangat buruk).")
     
-    # 3. Analisis Standar Deviasi (Variansi)
     std_data = df_filtered[services].std().reset_index()
     std_data.columns = ['Unit Layanan', 'Tingkat Inkonsistensi (Std Dev)']
     std_data = std_data.sort_values(by='Tingkat Inkonsistensi (Std Dev)', ascending=False)
