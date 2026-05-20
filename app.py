@@ -16,18 +16,15 @@ except ImportError:
 # ================= 1. KONFIGURASI & TEMA =================
 st.set_page_config(page_title="Executive Analytics", layout="wide", initial_sidebar_state="expanded")
 
-# CSS Elite Corporate: Mewah, Lembut, dan Sangat Profesional
+# CSS Elite Corporate: Label dipergelap agar kontras maksimal
 st.markdown("""
     <style>
-    /* Latar belakang aplikasi sedikit keabu-abuan agar kartu putih lebih menonjol */
     .stApp {
         background-color: #f8fafc;
     }
-    
-    /* Desain Kartu Metrik Elite */
     .metric-card {
         background-color: #ffffff;
-        border: 1px solid #f1f5f9;
+        border: 1px solid #e2e8f0;
         padding: 24px;
         border-radius: 12px;
         box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
@@ -39,24 +36,22 @@ st.markdown("""
         box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.08);
     }
     .metric-title {
-        color: #64748b;
+        color: #0f172a; /* Warna gelap / hitam */
         font-size: 13px;
-        font-weight: 600;
+        font-weight: 700;
         letter-spacing: 1px;
         text-transform: uppercase;
         margin-bottom: 12px;
     }
     .metric-value {
-        color: #0f172a;
+        color: #0f172a; /* Warna gelap / hitam */
         font-size: 34px;
-        font-weight: 800;
+        font-weight: 900;
         font-family: 'Helvetica Neue', sans-serif;
     }
-    
-    /* Styling Tabs yang Elegan */
     .stTabs [data-baseweb="tab-list"] {
         gap: 32px;
-        border-bottom: 1px solid #e2e8f0;
+        border-bottom: 1px solid #cbd5e1;
     }
     .stTabs [data-baseweb="tab"] {
         height: 54px;
@@ -64,51 +59,47 @@ st.markdown("""
         border-radius: 0;
         padding-top: 12px;
         padding-bottom: 12px;
-        color: #64748b;
-        font-weight: 500;
+        color: #334155; /* Abu-abu gelap */
+        font-weight: 600;
     }
     .stTabs [aria-selected="true"] {
-        color: #0f172a !important;
+        color: #0f172a !important; /* Hitam pekat saat dipilih */
         border-bottom: 3px solid #0f172a !important;
-        font-weight: 600;
+        font-weight: 800;
         background-color: transparent !important;
     }
-    
-    /* Tipografi Header */
-    h1, h2, h3, h4 {
-        color: #0f172a;
+    h1, h2, h3, h4, p, span, div {
+        color: #0f172a; /* Memaksa teks header hitam */
         font-family: 'Helvetica Neue', sans-serif;
-        font-weight: 700;
     }
     hr {
-        border-color: #e2e8f0;
+        border-color: #cbd5e1;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Palet Warna Elite / Muted
+# Palet Warna
 nps_colors = {
-    'Promoter': '#059669', # Emerald Muted
-    'Passive': '#94a3b8',  # Silver/Slate
-    'Detractor': '#e11d48' # Crimson/Rose
+    'Promoter': '#059669', 
+    'Passive': '#94a3b8',  
+    'Detractor': '#e11d48' 
 }
-primary_color = '#1e293b'   # Midnight Blue
-secondary_color = '#0284c7' # Elegant Ocean Blue
+primary_color = '#1e293b'   
+secondary_color = '#0284c7' 
 
-# Fungsi bantuan untuk mengatur tema layout plotly secara global
+# Fungsi layout dengan font HITAM PEKAT
 def elite_layout(fig, title=""):
     fig.update_layout(
-        title=dict(text=title, font=dict(size=18, color='#0f172a', family='Helvetica Neue')),
+        title=dict(text=title, font=dict(size=18, color='#0f172a', family='Helvetica Neue', weight='bold')),
         template="plotly_white",
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
         margin=dict(t=60, b=20, l=20, r=20),
-        font=dict(color='#475569'),
-        hoverlabel=dict(bgcolor="white", font_size=13, font_family="Helvetica Neue")
+        font=dict(color='#0f172a', size=13, weight='bold'), # FONT HITAM GELAP
+        hoverlabel=dict(bgcolor="white", font_size=13, font_family="Helvetica Neue", font_color="#0f172a")
     )
-    # Menyamarkan gridlines agar lebih bersih
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9', zeroline=False)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#f1f5f9', zeroline=False)
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#e2e8f0', zeroline=False, title_font=dict(color='#0f172a', weight='bold'), tickfont=dict(color='#0f172a', weight='bold'))
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#e2e8f0', zeroline=False, title_font=dict(color='#0f172a', weight='bold'), tickfont=dict(color='#0f172a', weight='bold'))
     return fig
 
 # ================= 2. LOAD & PRE-PROCESS DATA =================
@@ -185,7 +176,7 @@ with tab1:
     with t1_r1_c1:
         trend_data = df_filtered.groupby('Date').agg(Total=('NPS', 'count'), NPS_Avg=('NPS', 'mean')).reset_index()
         fig_trend = go.Figure()
-        fig_trend.add_trace(go.Bar(x=trend_data['Date'], y=trend_data['Total'], name='Volume Kunjungan', marker_color='#e2e8f0', yaxis='y1'))
+        fig_trend.add_trace(go.Bar(x=trend_data['Date'], y=trend_data['Total'], name='Volume Kunjungan', marker_color='#cbd5e1', yaxis='y1'))
         fig_trend.add_trace(go.Scatter(x=trend_data['Date'], y=trend_data['NPS_Avg'], name='NPS Rata-rata', mode='lines+markers', line=dict(color=primary_color, width=3), yaxis='y2'))
         fig_trend = elite_layout(fig_trend, "Dinamika Kunjungan & Skor Kepuasan Operasional")
         fig_trend.update_layout(yaxis=dict(title='Volume Pasien', showgrid=False), yaxis2=dict(title='Skor NPS', overlaying='y', side='right', range=[0, 10], showgrid=False))
@@ -195,14 +186,14 @@ with tab1:
         fig_donut = px.pie(nps_counts, values='count', names='NPS_Category', hole=0.7, color='NPS_Category', color_discrete_map=nps_colors)
         fig_donut = elite_layout(fig_donut, "Distribusi Segmen Pelanggan")
         fig_donut.update_traces(textposition='outside', textinfo='percent+label', hoverinfo='label+value+percent')
-        fig_donut.update_layout(showlegend=False) # Hilangkan legend agar lebih bersih
+        fig_donut.update_layout(showlegend=False) 
         st.plotly_chart(fig_donut, use_container_width=True)
 
     t1_r2_c1, t1_r2_c2 = st.columns([1.5, 2.5])
     with t1_r2_c1:
         branch_nps = df_filtered.groupby('Branch')['NPS'].mean().sort_values(ascending=True).reset_index()
         fig_lead = px.bar(branch_nps, x='NPS', y='Branch', orientation='h', color='NPS', color_continuous_scale='Teal')
-        fig_lead = elite_layout(fig_lead, "Peringkat Kinerja Fasilitas (Berdasarkan NPS)")
+        fig_lead = elite_layout(fig_lead, "Peringkat Kinerja Fasilitas")
         fig_lead.update_layout(coloraxis_showscale=False)
         st.plotly_chart(fig_lead, use_container_width=True)
     with t1_r2_c2:
@@ -218,25 +209,25 @@ with tab2:
         service_means.columns = ['Layanan', 'Skor']
         fig_radar = px.line_polar(service_means, r='Skor', theta='Layanan', line_close=True)
         fig_radar.update_traces(fill='toself', line_color=secondary_color, fillcolor='rgba(2, 132, 199, 0.15)', line_width=2)
-        fig_radar = elite_layout(fig_radar, "Spektrum Kinerja Layanan Menyeluruh")
-        fig_radar.update_layout(polar=dict(radialaxis=dict(range=[1, 5], gridcolor='#e2e8f0'), angularaxis=dict(gridcolor='#e2e8f0')))
+        fig_radar = elite_layout(fig_radar, "Spektrum Kinerja Layanan")
+        fig_radar.update_layout(polar=dict(radialaxis=dict(range=[1, 5], gridcolor='#cbd5e1'), angularaxis=dict(gridcolor='#cbd5e1')))
         st.plotly_chart(fig_radar, use_container_width=True)
     with t2_r1_c2:
         corr_data = df_filtered[services + ['NPS']].corr()['NPS'].drop('NPS').sort_values(ascending=True)
         fig_driver = px.bar(corr_data, orientation='h', color=corr_data.values, color_continuous_scale='Blues')
-        fig_driver = elite_layout(fig_driver, "Analisis Faktor Pendorong Kepuasan (Key Drivers)")
+        fig_driver = elite_layout(fig_driver, "Faktor Pendorong Kepuasan")
         fig_driver.update_layout(xaxis_title="Koefisien Korelasi", coloraxis_showscale=False)
         st.plotly_chart(fig_driver, use_container_width=True)
 
     heatmap_data = df_filtered.groupby('Branch')[services].mean()
     fig_heat = px.imshow(heatmap_data.T, color_continuous_scale='Teal', text_auto=".1f", aspect="auto")
-    fig_heat = elite_layout(fig_heat, "Matriks Panas: Evaluasi Layanan Lintas Fasilitas")
+    fig_heat = elite_layout(fig_heat, "Matriks Panas: Evaluasi Layanan")
     st.plotly_chart(fig_heat, use_container_width=True)
 
     t2_r3_c1, t2_r3_c2 = st.columns(2)
     with t2_r3_c1:
         fig_box = px.box(df_filtered, x='Branch', y='Waiting Time', color='Branch', color_discrete_sequence=px.colors.qualitative.Prism)
-        fig_box = elite_layout(fig_box, "Distribusi Waktu Tunggu Operasional")
+        fig_box = elite_layout(fig_box, "Distribusi Waktu Tunggu")
         fig_box.update_layout(showlegend=False)
         st.plotly_chart(fig_box, use_container_width=True)
     with t2_r3_c2:
@@ -245,7 +236,7 @@ with tab2:
             go.Bar(name='Konsultasi Dokter', x=doc_nurse['Branch'], y=doc_nurse['Doctor Consultation'], marker_color=primary_color),
             go.Bar(name='Layanan Perawat', x=doc_nurse['Branch'], y=doc_nurse['Nurse Service'], marker_color=secondary_color)
         ])
-        fig_dn = elite_layout(fig_dn, "Komparasi Evaluasi Medis Profesional")
+        fig_dn = elite_layout(fig_dn, "Komparasi Evaluasi Medis")
         fig_dn.update_layout(barmode='group', yaxis=dict(range=[1, 5]))
         st.plotly_chart(fig_dn, use_container_width=True)
 
@@ -255,31 +246,33 @@ with tab3:
     with t3_r1_c1:
         bubble_data = df_filtered.groupby('Branch').agg(CSI=('CSI', 'mean'), Loyalty=('Loyalty', 'mean'), CES=('CES', 'mean')).reset_index()
         fig_bub = px.scatter(bubble_data, x="CSI", y="Loyalty", size="CES", color="Branch", hover_name="Branch", size_max=35, color_discrete_sequence=px.colors.qualitative.Safe)
-        fig_bub = elite_layout(fig_bub, "Matriks Kuadran Strategis (Kepuasan vs Retensi)")
-        fig_bub.add_vline(x=bubble_data['CSI'].mean(), line_dash="dash", line_color="#cbd5e1", line_width=2)
-        fig_bub.add_hline(y=bubble_data['Loyalty'].mean(), line_dash="dash", line_color="#cbd5e1", line_width=2)
+        fig_bub = elite_layout(fig_bub, "Matriks Kuadran (Kepuasan vs Retensi)")
+        fig_bub.add_vline(x=bubble_data['CSI'].mean(), line_dash="dash", line_color="#0f172a", line_width=2)
+        fig_bub.add_hline(y=bubble_data['Loyalty'].mean(), line_dash="dash", line_color="#0f172a", line_width=2)
         st.plotly_chart(fig_bub, use_container_width=True)
     with t3_r1_c2:
         macro_corr = df_filtered[['NPS', 'CSI', 'Loyalty', 'CES']].corr()
         fig_mcorr = px.imshow(macro_corr, text_auto=".2f", color_continuous_scale='Blues')
-        fig_mcorr = elite_layout(fig_mcorr, "Korelasi Indikator Strategis Makro")
+        fig_mcorr = elite_layout(fig_mcorr, "Korelasi Indikator Makro")
         st.plotly_chart(fig_mcorr, use_container_width=True)
 
     t3_r2_c1, t3_r2_c2, t3_r2_c3 = st.columns(3)
     with t3_r2_c1:
         age_loyalty = df_filtered.groupby('Age_Group')['Loyalty'].mean().reset_index()
         fig_al = px.bar(age_loyalty, x='Age_Group', y='Loyalty', color='Loyalty', color_continuous_scale='Blues')
-        fig_al = elite_layout(fig_al, "Profil Retensi Berdasarkan Generasi")
+        fig_al = elite_layout(fig_al, "Retensi Berdasarkan Generasi")
         fig_al.update_layout(coloraxis_showscale=False, yaxis=dict(range=[1, 5]))
         st.plotly_chart(fig_al, use_container_width=True)
     with t3_r2_c2:
         fig_ces = px.histogram(df_filtered, x='CES', color='NPS_Category', barmode='group', color_discrete_map=nps_colors)
-        fig_ces = elite_layout(fig_ces, "Distribusi Beban Upaya Pelanggan (CES)")
+        fig_ces = elite_layout(fig_ces, "Beban Upaya Pelanggan (CES)")
         st.plotly_chart(fig_ces, use_container_width=True)
     with t3_r2_c3:
         trend_loyalty = df_filtered.groupby('Date')['Loyalty'].mean().reset_index()
-        fig_tl = px.line(trend_loyalty, x='Date', y='Loyalty', markers=True, line_shape='spline', line=dict(color=secondary_color, width=3))
-        fig_tl = elite_layout(fig_tl, "Tren Retensi & Loyalitas Periode Aktif")
+        # [MEMPERBAIKI ERROR TYPEERROR DI SINI]
+        fig_tl = px.line(trend_loyalty, x='Date', y='Loyalty', markers=True, line_shape='spline')
+        fig_tl.update_traces(line=dict(color=secondary_color, width=3))
+        fig_tl = elite_layout(fig_tl, "Tren Retensi & Loyalitas")
         fig_tl.update_layout(yaxis=dict(range=[1, 5]))
         st.plotly_chart(fig_tl, use_container_width=True)
 
@@ -288,38 +281,39 @@ with tab4:
     t4_r1_c1, t4_r1_c2 = st.columns([1, 1])
     with t4_r1_c1:
         hour_nps = df_filtered.groupby('Hour')['NPS'].mean().reset_index()
-        fig_hour = px.line(hour_nps, x='Hour', y='NPS', markers=True, line_shape='spline', line=dict(color=primary_color, width=3))
-        fig_hour = elite_layout(fig_hour, "Volatilitas Sentimen Berdasarkan Jam Operasional")
+        # [MEMPERBAIKI ERROR TYPEERROR DI SINI JUGA]
+        fig_hour = px.line(hour_nps, x='Hour', y='NPS', markers=True, line_shape='spline')
+        fig_hour.update_traces(line=dict(color=primary_color, width=3))
+        fig_hour = elite_layout(fig_hour, "Fluktuasi Sentimen Berdasarkan Jam")
         fig_hour.update_layout(xaxis=dict(tickmode='linear', tick0=0, dtick=2))
         st.plotly_chart(fig_hour, use_container_width=True)
     with t4_r1_c2:
         detractors = df_filtered[df_filtered['NPS_Category'] == 'Detractor']
         if not detractors.empty:
             fig_detage = px.histogram(detractors, x='Age', nbins=15, color_discrete_sequence=[nps_colors['Detractor']])
-            fig_detage = elite_layout(fig_detage, "Profil Demografi Segmen Kritis (Detractor)")
+            fig_detage = elite_layout(fig_detage, "Demografi Segmen Kritis")
             st.plotly_chart(fig_detage, use_container_width=True)
         else:
             st.info("Kondisi Optimal: Tidak terdeteksi pasien pada segmen Detractor di rentang waktu ini.")
 
-    st.markdown("<h4 style='margin-top: 20px;'>Tinjauan Data Kualitatif</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='margin-top: 20px; color: #0f172a; font-weight: bold;'>Tinjauan Data Kualitatif</h4>", unsafe_allow_html=True)
     if 'Improvement_Feedback' in df_filtered.columns:
         cat = st.radio("Saring Sentimen Evaluasi:", ["Seluruh Data Kualitatif", "Fokus Segmen Kritis (Detractor)"], horizontal=True)
         vocab_df = df_filtered if cat == "Seluruh Data Kualitatif" else detractors
         
-        # Tampilkan tabel tanpa index dan styling yang lebih bersih
         st.dataframe(
             vocab_df[['Datetime', 'Branch', 'Gender', 'Age', 'NPS', 'Improvement_Feedback']].sort_values(by='NPS'), 
             use_container_width=True, height=250, hide_index=True
         )
     
     fig_stack = px.histogram(df_filtered, y="Branch", color="NPS_Category", orientation='h', color_discrete_map=nps_colors)
-    fig_stack = elite_layout(fig_stack, "Proporsi Sentimen Berdasarkan Wilayah Operasional")
+    fig_stack = elite_layout(fig_stack, "Proporsi Sentimen Berdasarkan Wilayah")
     fig_stack.update_layout(barmode='stack')
     st.plotly_chart(fig_stack, use_container_width=True)
 
 # ----------------- TAB 5: TEXT ANALYTICS -----------------
 with tab5:
-    st.markdown("<h4 style='margin-bottom: 20px;'>Analisis Semantik & Ekstraksi Kata Kunci</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='margin-bottom: 20px; color: #0f172a; font-weight: bold;'>Analisis Semantik & Ekstraksi Kata Kunci</h4>", unsafe_allow_html=True)
     
     if 'Improvement_Feedback' in df_filtered.columns:
         all_text = " ".join(df_filtered['Improvement_Feedback'].dropna().astype(str).tolist()).lower()
@@ -328,7 +322,7 @@ with tab5:
             t5_r1_c1, t5_r1_c2 = st.columns(2)
             
             with t5_r1_c1:
-                st.markdown("<p style='font-weight: 600; color: #64748b; font-size: 14px; text-transform: uppercase;'>Pemetaan Leksikal (Global)</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-weight: 700; color: #0f172a; font-size: 14px; text-transform: uppercase;'>Pemetaan Leksikal (Global)</p>", unsafe_allow_html=True)
                 wordcloud_all = WordCloud(width=800, height=500, background_color='#f8fafc', colormap='ocean', max_words=100, contour_width=0).generate(all_text)
                 fig_wc_all, ax_all = plt.subplots(figsize=(8, 5))
                 ax_all.imshow(wordcloud_all, interpolation='bilinear')
@@ -337,7 +331,7 @@ with tab5:
                 st.pyplot(fig_wc_all)
                 
             with t5_r1_c2:
-                st.markdown("<p style='font-weight: 600; color: #64748b; font-size: 14px; text-transform: uppercase;'>Pemetaan Leksikal (Segmen Kritis)</p>", unsafe_allow_html=True)
+                st.markdown("<p style='font-weight: 700; color: #0f172a; font-size: 14px; text-transform: uppercase;'>Pemetaan Leksikal (Segmen Kritis)</p>", unsafe_allow_html=True)
                 detractor_text = " ".join(df_filtered[df_filtered['NPS_Category'] == 'Detractor']['Improvement_Feedback'].dropna().astype(str).tolist()).lower()
                 
                 if len(detractor_text.strip()) > 0:
