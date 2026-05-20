@@ -3,14 +3,15 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+import re
+from collections import Counter
 
-# Mengimpor library Machine Learning & PCA
+# Library untuk Word Cloud
 try:
-    from sklearn.cluster import KMeans
-    from sklearn.preprocessing import StandardScaler
-    from sklearn.decomposition import PCA
+    from wordcloud import WordCloud
+    import matplotlib.pyplot as plt
 except ImportError:
-    st.error("⚠️ Library 'scikit-learn' belum terinstal. Tambahkan di requirements.txt!")
+    st.error("⚠️ Library 'wordcloud' atau 'matplotlib' belum terinstal. Tambahkan di requirements.txt!")
     st.stop()
 
 # ================= 1. KONFIGURASI & TEMA =================
@@ -70,7 +71,7 @@ if selected_branch != "Semua Cabang":
 if selected_gender != "Semua":
     df_filtered = df_filtered[df_filtered['Gender'] == selected_gender]
 
-st.markdown("<h1 style='text-align: center; color: #1E3A8A;'>🏥 Hospital Command Center 360° (Ultimate)</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align: center; color: #1E3A8A;'>🏥 Hospital Command Center 360°</h1>", unsafe_allow_html=True)
 st.markdown("---")
 
 if df_filtered.empty:
@@ -78,7 +79,7 @@ if df_filtered.empty:
     st.stop()
 
 # ================= 4. TABS =================
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Executive Summary", "🔍 Service Deep Dive", "❤️ Loyalty & Retention", "💬 Voice of Customer (VOC)", "🤖 Advanced AI (PCA & Clustering)"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Executive Summary", "🔍 Service Deep Dive", "❤️ Loyalty & Retention", "💬 Voice of Customer (VOC)", "📝 Text Analytics (Word Cloud)"])
 
 # ----------------- TAB 1: EXECUTIVE SUMMARY -----------------
 with tab1:
@@ -199,92 +200,67 @@ with tab4:
     fig_stack = px.histogram(df_filtered, y="Branch", color="NPS_Category", orientation='h', title="4. Distribusi Sentimen per Cabang", color_discrete_map={'Promoter':'#28a745', 'Passive':'#ffc107', 'Detractor':'#dc3545'})
     st.plotly_chart(fig_stack, use_container_width=True)
 
-# ----------------- TAB 5: ADVANCED AI (PCA & CLUSTERING) -----------------
+# ----------------- TAB 5: TEXT ANALYTICS (WORD CLOUD) -----------------
 with tab5:
-    st.markdown("### 🤖 Segmentasi Persona Pasien berbasis AI (K-Means & PCA)")
-    st.info("AI secara otomatis mengelompokkan pasien berdasarkan seluruh matriks layanan, lalu dimensinya direduksi menggunakan PCA agar bisa dipetakan secara 2D tanpa kehilangan makna analitis.")
+    st.markdown("### ☁️ Analisis Teks (Word Cloud) dari Umpan Balik Pasien")
+    st.info("Visualisasi ini mengekstrak kata-kata yang paling sering diketik oleh pasien di kolom komentar. Semakin besar ukuran hurufnya, semakin sering kata tersebut muncul.")
     
-    # Memasukkan semua fitur metrik utama agar clustering dan PCA lebih kaya
-    features_ai = ['CSI', 'Loyalty', 'Waiting Time'] + services
-    
-    if len(df_filtered) > 10: 
-        X = df_filtered[features_ai].dropna()
+    if 'Improvement_Feedback' in df_filtered.columns:
+        # Mengambil semua teks dan mengubah ke huruf kecil
+        all_text = " ".join(df_filtered['Improvement_Feedback'].dropna().astype(str).tolist()).lower()
         
-        # 1. Standarisasi Data
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(X)
-        
-        # 2. Menjalankan K-Means Clustering
-        kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-        clusters = kmeans.fit_predict(X_scaled)
-        
-        # 3. Menjalankan PCA (Reduksi ke 2 Dimensi)
-        pca = PCA(n_components=2)
-        pca_components = pca.fit_transform(X_scaled)
-        
-        # 4. Menghitung Persentase Keragaman (Explained Variance)
-        var_pc1 = pca.explained_variance_ratio_[0] * 100
-        var_pc2 = pca.explained_variance_ratio_[1] * 100
-        total_variance = var_pc1 + var_pc2
-        
-        # Menyimpan hasil ke DataFrame
-        df_filtered.loc[X.index, 'Cluster'] = clusters
-        df_filtered.loc[X.index, 'PC1'] = pca_components[:, 0]
-        df_filtered.loc[X.index, 'PC2'] = pca_components[:, 1]
-        
-        df_filtered['Persona'] = df_filtered['Cluster'].map({
-            0: "Segmen A (Persona 1)", 
-            1: "Segmen B (Persona 2)", 
-            2: "Segmen C (Persona 3)"
-        })
+        if len(all_text.strip()) > 0:
+            t5_r1_c1, t5_r1_c2 = st.columns(2)
+            
+            with t5_r1_c1:
+                st.markdown("#### 🗣️ Word Cloud Keseluruhan Pasien")
+                # Membuat Word Cloud Umum (Warna Biru/Teal)
+                wordcloud_all = WordCloud(width=800, height=500, background_color='white', colormap='ocean', max_words=100).generate(all_text)
+                fig_wc_all, ax_all = plt.subplots(figsize=(8, 5))
+                ax_all.imshow(wordcloud_all, interpolation='bilinear')
+                ax_all.axis('off')
+                st.pyplot(fig_wc_all)
+                
+            with t5_r1_c2:
+                st.markdown("#### 😡 Word Cloud Khusus Pasien Kecewa (Detractor)")
+                # Mengambil teks hanya dari pasien Detractor
+                detractor_text = " ".join(df_filtered[df_filtered['NPS_Category'] == 'Detractor']['Improvement_Feedback'].dropna().astype(str).tolist()).lower()
+                
+                if len(detractor_text.strip()) > 0:
+                    # Membuat Word Cloud Detractor (Warna Merah)
+                    wordcloud_det = WordCloud(width=800, height=500, background_color='white', colormap='Reds', max_words=100).generate(detractor_text)
+                    fig_wc_det, ax_det = plt.subplots(figsize=(8, 5))
+                    ax_det.imshow(wordcloud_det, interpolation='bilinear')
+                    ax_det.axis('off')
+                    st.pyplot(fig_wc_det)
+                else:
+                    st.success("🎉 Tidak ada komentar dari pasien yang kecewa pada filter saat ini!")
+                    
+            st.markdown("---")
+            st.markdown("### 📊 Top 10 Kata Teratas yang Paling Sering Muncul")
+            
+            # Membersihkan teks (menghapus tanda baca, mengambil kata > 3 huruf)
+            words = re.findall(r'\b\w{4,}\b', all_text)
+            
+            if words:
+                # Menghitung frekuensi kata
+                word_counts = Counter(words).most_common(10)
+                df_words = pd.DataFrame(word_counts, columns=['Kata Kunci', 'Frekuensi'])
+                df_words = df_words.sort_values(by='Frekuensi', ascending=True) # Sortir untuk Bar chart horizontal
+                
+                # Membuat grafik batang interaktif
+                fig_bar_words = px.bar(
+                    df_words, x='Frekuensi', y='Kata Kunci', orientation='h',
+                    title="Frekuensi Kemunculan Kata Kunci (Top 10)",
+                    color='Frekuensi', color_continuous_scale='Teal', text='Frekuensi'
+                )
+                fig_bar_words.update_traces(textposition='outside')
+                fig_bar_words.update_layout(coloraxis_showscale=False, margin=dict(t=40, b=0))
+                st.plotly_chart(fig_bar_words, use_container_width=True)
+            else:
+                st.info("Komentar terlalu pendek untuk dianalisis.")
 
-        t5_r1_c1, t5_r1_c2 = st.columns([1.5, 1])
-        with t5_r1_c1:
-            # Visualisasi 2D Scatter Plot dengan Info Keragaman
-            fig_pca = px.scatter(
-                df_filtered.loc[X.index], x='PC1', y='PC2', color='Persona',
-                opacity=0.8,
-                title=f"1. Peta 2D Segmen Pasien (Total Keragaman: {total_variance:.1f}%)",
-                labels={
-                    'PC1': f'Principal Component 1 ({var_pc1:.1f}%)',
-                    'PC2': f'Principal Component 2 ({var_pc2:.1f}%)'
-                },
-                hover_data=['Branch', 'Age', 'NPS'],
-                color_discrete_sequence=px.colors.qualitative.Pastel
-            )
-            fig_pca.update_layout(margin=dict(l=0, r=0, b=0, t=40))
-            st.plotly_chart(fig_pca, use_container_width=True)
-            
-        with t5_r1_c2:
-            # Karakteristik Profil tiap Segmen (Ambil 5 fitur utama saja untuk Radar Chart)
-            top_features = ['CSI', 'Loyalty', 'Waiting Time', 'Doctor Consultation', 'Nurse Service']
-            cluster_profile = df_filtered.loc[X.index].groupby('Persona')[top_features].mean().reset_index()
-            
-            melted_profile = pd.melt(cluster_profile, id_vars=['Persona'], value_vars=top_features)
-            
-            fig_radar_ai = px.line_polar(
-                melted_profile, r='value', theta='variable', color='Persona',
-                line_close=True, title="2. Profil Rata-rata per Persona",
-                color_discrete_sequence=px.colors.qualitative.Pastel
-            )
-            fig_radar_ai.update_layout(polar=dict(radialaxis=dict(range=[1, 5])), margin=dict(t=40, b=0))
-            st.plotly_chart(fig_radar_ai, use_container_width=True)
-
+        else:
+            st.warning("Teks feedback kosong. Pastikan pasien mengisi kolom komentar.")
     else:
-        st.warning("⚠️ Data terlalu sedikit untuk dianalisis oleh AI.")
-
-    st.markdown("---")
-    st.markdown("### 📊 Analisis Inkonsistensi (Bottleneck) Layanan")
-    st.caption("Semakin tinggi tiang diagram (Standard Deviation), semakin **TIDAK KONSISTEN** layanan tersebut (kadang sangat bagus, kadang sangat buruk).")
-    
-    std_data = df_filtered[services].std().reset_index()
-    std_data.columns = ['Unit Layanan', 'Tingkat Inkonsistensi (Std Dev)']
-    std_data = std_data.sort_values(by='Tingkat Inkonsistensi (Std Dev)', ascending=False)
-    
-    fig_std = px.bar(
-        std_data, x='Unit Layanan', y='Tingkat Inkonsistensi (Std Dev)',
-        color='Tingkat Inkonsistensi (Std Dev)', color_continuous_scale='Reds',
-        title="3. Layanan Paling Tidak Konsisten (Fluktuatif)"
-    )
-    fig_std.update_layout(coloraxis_showscale=False)
-    st.plotly_chart(fig_std, use_container_width=True)
+        st.warning("Kolom 'Improvement_Feedback' tidak ditemukan di dataset.")
