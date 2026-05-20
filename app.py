@@ -4,187 +4,176 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 # 1. Konfigurasi Halaman & Tema Premium
-st.set_page_config(page_title="Dashboard Rumah Sakit", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Dashboard Analitik RS", layout="wide", initial_sidebar_state="expanded")
 
-# Custom CSS untuk mempercantik tampilan kartu (Cards) dan layout
 st.markdown("""
     <style>
-    .block-container {padding-top: 2rem; padding-bottom: 2rem;}
-    .metric-card {
-        background-color: #f8f9fa;
-        border: 1px solid #e9ecef;
-        padding: 15px;
-        border-radius: 10px;
-        text-align: center;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
-    }
-    .metric-value {
-        font-size: 28px;
-        font-weight: bold;
-        color: #007A87;
-    }
-    .metric-label {
-        font-size: 14px;
-        color: #6c757d;
-        font-weight: 500;
-    }
+    .metric-card {background-color: #ffffff; border-left: 5px solid #1E3A8A; padding: 15px; border-radius: 5px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
+    .metric-title {color: #6c757d; font-size: 14px; font-weight: bold; text-transform: uppercase;}
+    .metric-value {color: #1E3A8A; font-size: 28px; font-weight: bold;}
     </style>
 """, unsafe_allow_html=True)
 
-# 2. Fungsi Membaca Data
+# 2. Fungsi Membaca & Pre-processing Data
 @st.cache_data
 def load_data():
     data = pd.read_csv("Streamlit.csv", sep=";")
-    # Bersihkan nama cabang dari prefix jika ada
+    
+    # Membersihkan nama cabang
     data['Branch'] = data['Branch'].str.replace('Always Healthy Hospital ', '')
+    
+    # Mengubah format Datetime menjadi tipe data tanggal yang benar
+    data['Datetime'] = pd.to_datetime(data['Datetime'], format='%d/%m/%Y %H.%M', errors='coerce')
+    data['Date'] = data['Datetime'].dt.date
+    
+    # Membuat Kategori NPS
+    def categorize_nps(score):
+        if score >= 9: return 'Promoter (Loyal)'
+        elif score >= 7: return 'Passive (Netral)'
+        else: return 'Detractor (Kecewa)'
+    data['NPS_Category'] = data['NPS'].apply(categorize_nps)
+    
     return data
 
 try:
     df = load_data()
 except Exception as e:
-    st.error("Data Streamlit.csv belum diupload dengan benar atau format terganggu!")
+    st.error("Gagal memproses data. Pastikan format Datetime sesuai.")
     st.stop()
 
-# 3. Sidebar Filter yang Interaktif & Ramah Pengguna
+# 3. Sidebar Filter yang Komprehensif
 st.sidebar.markdown("## 🔍 Panel Filter Data")
 st.sidebar.markdown("---")
 
-# Filter Cabang Rumah Sakit
+# Filter Rentang Waktu
+min_date = df['Date'].min()
+max_date = df['Date'].max()
+selected_dates = st.sidebar.date_input("Pilih Rentang Waktu:", [min_date, max_date], min_value=min_date, max_value=max_date)
+
+if len(selected_dates) == 2:
+    start_date, end_date = selected_dates
+else:
+    start_date, end_date = min_date, max_date
+
+# Filter Cabang
 all_branches = ["Semua Cabang"] + sorted(list(df['Branch'].unique()))
-selected_branch = st.sidebar.selectbox("Pilih Cabang Rumah Sakit:", all_branches)
+selected_branch = st.sidebar.selectbox("Pilih Cabang:", all_branches)
 
-# Filter Gender
-selected_gender = st.sidebar.radio("Pilih Jenis Kelamin Pasien:", ["Semua", "Male", "Female"], horizontal=True)
+# Filter Gender & Umur
+selected_gender = st.sidebar.selectbox("Gender:", ["Semua", "Male", "Female"])
+age_range = st.sidebar.slider("Rentang Umur:", int(df['Age'].min()), int(df['Age'].max()), (int(df['Age'].min()), int(df['Age'].max())))
 
-# Filter Umur dengan Slider
-min_age = int(df['Age'].min())
-max_age = int(df['Age'].max())
-selected_age = st.sidebar.slider("Rentang Umur Pasien:", min_age, max_age, (min_age, max_age))
-
-# Mengaplikasikan filter ke Dataframe
-df_filtered = df.copy()
+# Menerapkan Filter ke Dataframe
+df_filtered = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
 if selected_branch != "Semua Cabang":
     df_filtered = df_filtered[df_filtered['Branch'] == selected_branch]
 if selected_gender != "Semua":
     df_filtered = df_filtered[df_filtered['Gender'] == selected_gender]
-df_filtered = df_filtered[(df_filtered['Age'] >= selected_age[0]) & (df_filtered['Age'] <= selected_age[1])]
+df_filtered = df_filtered[(df_filtered['Age'] >= age_range[0]) & (df_filtered['Age'] <= age_range[1])]
 
+# 4. Header & Metrik Utama
+st.markdown("<h1 style='text-align: center; color: #1E3A8A;'>📈 Dashboard Analitik & Performa Layanan Rumah Sakit</h1>", unsafe_allow_html=True)
+st.markdown("---")
 
-# 4. Header Utama Dashboard
-st.markdown("<h1 style='text-align: center; color: #1E3A8A; margin-bottom: 30px;'>📊 Dashboard Analisis Kepuasan & Kinerja Layanan Rumah Sakit</h1>", unsafe_allow_html=True)
+if df_filtered.empty:
+    st.warning("Tidak ada data pada rentang filter yang dipilih.")
+    st.stop()
 
-# 5. Baris Pertama: Ringkasan Indikator Utama (KPI Metrics)
-total_respondents = len(df_filtered)
-avg_nps = df_filtered['NPS'].mean() if total_respondents > 0 else 0
-avg_csi = df_filtered['CSI'].mean() if total_respondents > 0 else 0
-avg_waiting = df_filtered['Waiting Time'].mean() if total_respondents > 0 else 0
+# Menghitung Metrik Lanjutan
+total_resp = len(df_filtered)
+avg_nps = df_filtered['NPS'].mean()
+avg_csi = df_filtered['CSI'].mean()
+promoter_pct = (len(df_filtered[df_filtered['NPS_Category'] == 'Promoter (Loyal)']) / total_resp) * 100
 
-m_col1, m_col2, m_col3, m_col4 = st.columns(4)
-
-with m_col1:
-    st.markdown(f"<div class='metric-card'><div class='metric-label'>👥 TOTAL RESPONDEN</div><div class='metric-value'>{total_respondents:,}</div></div>", unsafe_allow_html=True)
-with m_col2:
-    st.markdown(f"<div class='metric-card'><div class='metric-label'>📈 RATA-RATA NPS</div><div class='metric-value'>{avg_nps:.2f} <span style='font-size:16px; color:#6c757d;'>/10</span></div></div>", unsafe_allow_html=True)
-with m_col3:
-    st.markdown(f"<div class='metric-card'><div class='metric-label'>⭐ RATA-RATA CSI</div><div class='metric-value'>{avg_csi:.2f} <span style='font-size:16px; color:#6c757d;'>/5</span></div></div>", unsafe_allow_html=True)
-with m_col4:
-    st.markdown(f"<div class='metric-card'><div class='metric-label'>⏱️ SKOR WAKTU TUNGGU</div><div class='metric-value'>{avg_waiting:.2f} <span style='font-size:16px; color:#6c757d;'>/5</span></div></div>", unsafe_allow_html=True)
-
+col1, col2, col3, col4 = st.columns(4)
+col1.markdown(f"<div class='metric-card'><div class='metric-title'>Total Responden</div><div class='metric-value'>{total_resp:,}</div></div>", unsafe_allow_html=True)
+col2.markdown(f"<div class='metric-card'><div class='metric-title'>Rata-rata NPS (0-10)</div><div class='metric-value'>{avg_nps:.1f}</div></div>", unsafe_allow_html=True)
+col3.markdown(f"<div class='metric-card'><div class='metric-title'>Indeks Kepuasan / CSI (1-5)</div><div class='metric-value'>{avg_csi:.2f}</div></div>", unsafe_allow_html=True)
+col4.markdown(f"<div class='metric-card'><div class='metric-title'>Persentase Promoters</div><div class='metric-value'>{promoter_pct:.1f}%</div></div>", unsafe_allow_html=True)
 st.markdown("<br>", unsafe_allow_html=True)
 
+# 5. VISUALISASI MENDALAM (DEEP DIVE ANALYTICS)
 
-# 6. Baris Kedua: Grafik Demografi & Sebaran Kepuasan
-row2_col1, row2_col2 = st.columns([3, 2])
+st.markdown("### 1️⃣ Analisis Tren & Segmen Pasien")
+row1_col1, row1_col2 = st.columns([2, 1])
+
+with row1_col1:
+    # Time Series (Tren Waktu)
+    trend_df = df_filtered.groupby('Date')[['NPS', 'CSI']].mean().reset_index()
+    fig_trend = px.line(trend_df, x='Date', y=['NPS', 'CSI'], markers=True, 
+                        title="Pergerakan Rata-rata Skor NPS & CSI Harian",
+                        labels={"value": "Skor Rata-rata", "Date": "Tanggal", "variable": "Metrik"})
+    fig_trend.update_layout(legend_title="", hovermode="x unified")
+    st.plotly_chart(fig_trend, use_container_width=True)
+    st.caption("🔍 *Analisis: Identifikasi apakah terjadi lonjakan/penurunan kepuasan pada tanggal tertentu (misal saat libur panjang).*")
+
+with row1_col2:
+    # NPS Composition (Pie)
+    nps_counts = df_filtered['NPS_Category'].value_counts().reset_index()
+    nps_counts.columns = ['Kategori', 'Jumlah']
+    fig_nps = px.pie(nps_counts, values='Jumlah', names='Kategori', 
+                     color='Kategori',
+                     color_discrete_map={'Promoter (Loyal)':'#28a745', 'Passive (Netral)':'#ffc107', 'Detractor (Kecewa)':'#dc3545'},
+                     hole=0.5, title="Komposisi Pelanggan (NPS)")
+    st.plotly_chart(fig_nps, use_container_width=True)
+    st.caption("🔍 *Analisis: Fokus pada zona merah (Detractor) yang berpotensi menyebarkan Word-of-Mouth negatif.*")
+
+st.markdown("---")
+
+st.markdown("### 2️⃣ Analisis Diagnostik Kinerja Layanan")
+row2_col1, row2_col2 = st.columns([1, 1])
+
+# Mengelompokkan kolom layanan
+services = ['Registration', 'Doctor Consultation', 'Nurse Service', 'Pharmacy Service', 
+            'Laboratory', 'Emergency Response', 'Billing Process', 'Facility Cleanliness', 
+            'Staff Friendliness', 'Waiting Time']
 
 with row2_col1:
-    st.markdown("### 🔀 Tren Kepuasan (NPS) Berdasarkan Umur & Gender")
-    if total_respondents > 0:
-        fig_scatter = px.scatter(
-            df_filtered, x="Age", y="NPS", color="Gender",
-            hover_data=["Branch"],
-            color_discrete_map={"Male": "#007A87", "Female": "#FF8A8A"},
-            labels={"Age": "Umur Pasien", "NPS": "Skor Kepuasan (NPS)"}
-        )
-        fig_scatter.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10))
-        fig_scatter.update_xaxes(showgrid=True, gridcolor="#e9ecef")
-        fig_scatter.update_yaxes(showgrid=True, gridcolor="#e9ecef")
-        st.plotly_chart(fig_scatter, use_container_width=True)
-    else:
-        st.info("Data tidak tersedia untuk kombinasi filter ini.")
+    # Radar Chart - Overview Kinerja
+    service_means = df_filtered[services].mean().reset_index()
+    service_means.columns = ['Layanan', 'Skor Rata-rata']
+    
+    fig_radar = go.Figure()
+    fig_radar.add_trace(go.Scatterpolar(
+        r=service_means['Skor Rata-rata'],
+        theta=service_means['Layanan'],
+        fill='toself',
+        name='Skor Layanan',
+        line_color='#007A87'
+    ))
+    fig_radar.update_layout(
+        polar=dict(radialaxis=dict(visible=True, range=[1, 5])),
+        title="Jaring Kinerja: Kekuatan & Kelemahan Departemen"
+    )
+    st.plotly_chart(fig_radar, use_container_width=True)
+    st.caption("🔍 *Analisis: Area yang mengerucut ke dalam menandakan departemen dengan layanan di bawah ekspektasi.*")
 
 with row2_col2:
-    st.markdown("### 🏥 Sebaran Responden per Cabang")
-    if total_respondents > 0:
-        branch_counts = df_filtered['Branch'].value_counts().reset_index()
-        branch_counts.columns = ['Cabang', 'Jumlah']
-        fig_pie = px.pie(
-            branch_counts, values='Jumlah', names='Cabang',
-            hole=0.4,
-            color_discrete_sequence=px.colors.qualitative.Safe
-        )
-        fig_pie.update_layout(margin=dict(t=10, b=10, l=10, r=10), showlegend=False)
-        st.plotly_chart(fig_pie, use_container_width=True)
+    # Correlation/Driver Analysis - INSIGHT PALING PENTING
+    st.markdown("##### 🔑 Layanan Apa yang Paling Mempengaruhi Kepuasan (NPS)?")
+    
+    # Hitung korelasi masing-masing layanan dengan NPS keseluruhan
+    corr_data = df_filtered[services + ['NPS']].corr()['NPS'].drop('NPS').sort_values(ascending=True)
+    corr_df = corr_data.reset_index()
+    corr_df.columns = ['Layanan', 'Dampak thd NPS (Korelasi)']
+    
+    fig_driver = px.bar(corr_df, x='Dampak thd NPS (Korelasi)', y='Layanan', orientation='h',
+                        color='Dampak thd NPS (Korelasi)', color_continuous_scale="Viridis",
+                        title="Driver Analysis: Prioritas Perbaikan")
+    fig_driver.update_layout(coloraxis_showscale=False)
+    st.plotly_chart(fig_driver, use_container_width=True)
+    st.caption("🔍 *Analisis: Layanan dengan batang terpanjang adalah kunci utama kepuasan pasien. Jika ini jelek, NPS pasti anjlok! Perbaiki layanan ini lebih dulu.*")
+
+st.markdown("---")
+
+# 6. Tabel Ekstraksi Feedback
+st.markdown("### 💬 Suara Pasien (Voice of Customer)")
+if 'Improvement_Feedback' in df_filtered.columns:
+    # Menampilkan yang benar-benar memberi kritik (Detractors) agar mudah dievaluasi
+    detractors_feedback = df_filtered[df_filtered['NPS_Category'] == 'Detractor (Kecewa)']
+    if not detractors_feedback.empty:
+        st.error(f"⚠️ Ditemukan {len(detractors_feedback)} pasien kecewa (Detractor). Berikut masukan mereka:")
+        st.dataframe(detractors_feedback[['Date', 'Branch', 'NPS', 'Improvement_Feedback']], use_container_width=True, hide_index=True)
     else:
-        st.info("Data tidak tersedia.")
-
-
-# 7. Baris Ketiga: Analisis Kepuasan Mendalam per Unit Layanan (Insight Utama!)
-st.markdown("---")
-st.markdown("### 🏢 Nilai Kepuasan Rata-rata Berdasarkan Unit Layanan")
-
-if total_respondents > 0:
-    # Mengambil kolom-kolom layanan medis utama
-    service_cols = {
-        "Pendaftaran": "Registration",
-        "Konsultasi Dokter": "Doctor Consultation",
-        "Pelayanan Perawat": "Nurse Service",
-        "Farmasi / Obat": "Pharmacy Service",
-        "Laboratorium": "Laboratory",
-        "Respon Gawat Darurat (UGD)": "Emergency Response",
-        "Proses Pembayaran (Kasir)": "Billing Process",
-        "Kebersihan Fasilitas": "Facility Cleanliness",
-        "Keramahan Staf": "Staff Friendliness"
-    }
-    
-    # Hitung rata-rata skor untuk masing-masing layanan
-    service_means = []
-    service_names = []
-    
-    for display_name, col_name in service_cols.items():
-        if col_name in df_filtered.columns:
-            service_means.append(df_filtered[col_name].mean())
-            service_names.append(display_name)
-            
-    # Susun ke dalam dataframe baru untuk divisualisasikan
-    df_services = pd.DataFrame({"Layanan": service_names, "Rata-rata Skor": service_means})
-    df_services = df_services.sort_values(by="Rata-rata Skor", ascending=True) # Urutkan dari yang terendah untuk evaluasi
-    
-    # Bikin Grafik Batang Horizontal berwarna Gradasi Teal-Navy
-    fig_bar = px.bar(
-        df_services, x="Rata-rata Skor", y="Layanan", orientation='h',
-        color="Rata-rata Skor",
-        color_continuous_scale=["#FF8A8A", "#007A87", "#1E3A8A"],
-        range_x=[1, 5],
-        labels={"Rata-rata Skor": "Skor Kepuasan Pasien (Skala 1-5)"}
-    )
-    fig_bar.update_layout(coloraxis_showscale=False, plot_bgcolor="rgba(0,0,0,0)", margin=dict(t=10, b=10))
-    fig_bar.update_xaxes(showgrid=True, gridcolor="#e9ecef")
-    st.plotly_chart(fig_bar, use_container_width=True)
-    st.caption("💡 *Insight: Layanan dengan batang warna kemerahan/berada di posisi atas memiliki skor kepuasan terendah dan memerlukan evaluasi segera oleh manajemen.*")
-else:
-    st.info("Data tidak tersedia.")
-
-
-# 8. Baris Keempat: Tabel Umpan Balik / Saran Pasien (Feedback Komentar)
-st.markdown("---")
-st.markdown("### 💬 Umpan Balik Langsung & Saran Perbaikan dari Pasien")
-
-if total_respondents > 0 and 'Improvement_Feedback' in df_filtered.columns:
-    # Filter keluhan pasien yang bukan saran standar/bagus saja
-    feedback_df = df_filtered[['Datetime', 'Branch', 'Gender', 'Age', 'Improvement_Feedback']].copy()
-    feedback_df.columns = ['Tanggal', 'Cabang', 'Gender', 'Umur', 'Komentar / Saran Pasien']
-    
-    # Tampilkan tabel yang bisa di-scroll dan difilter kata kuncinya oleh manajemen rumah sakit
-    st.dataframe(feedback_df, use_container_width=True, hide_index=True)
-else:
-    st.info("Kolom kritik/saran tidak ditemukan atau data kosong.")
+        st.success("Tidak ada pasien kategori Detractor pada filter ini!")
+        st.dataframe(df_filtered[['Date', 'Branch', 'NPS', 'Improvement_Feedback']].head(10), use_container_width=True, hide_index=True)
