@@ -1,19 +1,13 @@
-# --- CORE & DASHBOARD ---
 streamlit
 pandas
 numpy
 openpyxl
-
-# --- VISUALIZATION ---
 plotly
 matplotlib
 seaborn
-
-# --- MACHINE LEARNING & STATS (Untuk PCA & IPA) ---
 scikit-learn
 scipy
-
-# --- TEXT ANALYSIS & WORD CLOUD (Untuk Verbatim Indonesia) ---
 wordcloud
 nltk
 Sastrawi
+statsmodels
