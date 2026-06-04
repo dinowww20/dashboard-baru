@@ -10,391 +10,277 @@ try:
     from wordcloud import WordCloud
     import matplotlib.pyplot as plt
 except ImportError:
-    st.error("Library 'wordcloud' atau 'matplotlib' belum terinstal. Cek requirements.txt!")
+    st.error("Library 'wordcloud' atau 'matplotlib' belum terinstal. Tambahkan 'statsmodels' juga di requirements.txt!")
     st.stop()
 
 # =====================================================================
-# 1. KONFIGURASI & TEMA SAAS ULTRA-PREMIUM
+# 1. KONFIGURASI & THEME MANAGEMENT (SAAS LIGHT PREMIUM)
 # =====================================================================
 st.set_page_config(page_title="Executive CX Analytics - Bank XYZ", layout="wide", initial_sidebar_state="expanded")
 
-# CSS Paksaan agar kebal terhadap Dark Mode sistem & Desain Estetik
+# CSS Khusus: Memperbaiki Kontras Sidebar & Mencegah Cropping Content
 st.markdown("""
     <style>
-    /* Global Background & Font Reset */
     .stApp { background-color: #F8FAFC !important; }
     
-    /* Paksa Sidebar menjadi Light Mode yang Elegan */
+    /* Sidebar Styling: Force High Contrast */
     [data-testid="stSidebar"] {
         background-color: #FFFFFF !important;
         border-right: 1px solid #E2E8F0 !important;
-        box-shadow: 2px 0 15px rgba(0,0,0,0.03);
     }
-    /* Paksa semua teks di Sidebar menjadi Dark Slate agar TERBACA JELAS */
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label {
         color: #0F172A !important;
-        font-weight: 600;
+        font-weight: 600 !important;
+        font-size: 14px !important;
     }
     
-    /* Desain Kartu Metrik (Glassy & Hover Effect) */
+    /* Metric Cards: Glassmorphism Effect */
     .metric-card {
-        background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+        background: #FFFFFF;
         border: 1px solid #E2E8F0;
-        padding: 24px;
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
         text-align: center;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: 0.3s;
     }
-    .metric-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.15), 0 4px 6px -2px rgba(37, 99, 235, 0.05);
-        border-color: #BFDBFE;
-    }
-    .metric-title { color: #64748B; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
-    .metric-value { color: #0F172A; font-size: 38px; font-weight: 900; line-height: 1; }
-    .metric-value.highlight { color: #2563EB; }
-    .metric-value.danger { color: #E11D48; }
+    .metric-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); border-color: #3B82F6; }
+    .metric-title { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+    .metric-value { color: #1E293B; font-size: 32px; font-weight: 800; }
+    .metric-delta { font-size: 13px; font-weight: 600; }
 
-    /* Desain Tab Modern */
-    .stTabs [data-baseweb="tab-list"] {
-        background-color: transparent;
-        gap: 8px;
-    }
+    /* Custom Tabs */
+    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] {
-        background-color: #ffffff;
-        border: 1px solid #E2E8F0;
-        border-bottom: none;
+        background-color: #F1F5F9;
         border-radius: 8px 8px 0 0;
-        padding: 10px 24px;
-        color: #64748B !important;
-        font-weight: 600;
-        transition: all 0.2s ease;
+        padding: 8px 20px;
+        color: #475569 !important;
     }
     .stTabs [aria-selected="true"] {
-        background-color: #2563EB !important;
-        color: #ffffff !important;
-        border-color: #2563EB;
-        box-shadow: 0 -4px 6px -1px rgba(37, 99, 235, 0.1);
+        background-color: #1E40AF !important;
+        color: #FFFFFF !important;
+        font-weight: 700;
     }
-    
-    /* Global Teks Konten Utama */
-    h1, h2, h3, h4 { color: #0F172A !important; font-weight: 800 !important; }
-    p { color: #334155 !important; }
     </style>
 """, unsafe_allow_html=True)
 
-nps_colors = {'Promoter': '#10B981', 'Passive': '#F59E0B', 'Detractor': '#EF4444'}
-color_primary, color_secondary = '#1E3A8A', '#3B82F6'
+# Palet Warna Profesional
+COLORS = {
+    'XYZ': '#2563EB',      # Royal Blue
+    'Komp': '#F43F5E',     # Rose Red
+    'Neutral': '#94A3B8',  # Slate Grey
+    'Success': '#10B981'   # Emerald Green
+}
 
-def elite_layout(fig, title=""):
+# Fungsi Layout Plotly (Anti-Cropping & Aesthetic)
+def apply_pro_layout(fig, title="", height=450):
     fig.update_layout(
-        title=dict(text=title, font=dict(size=16, color='#0F172A', weight='bold')),
-        template="plotly_white", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=60, b=20, l=20, r=20), font=dict(color='#334155', size=12, weight='bold'),
-        hoverlabel=dict(bgcolor="#0F172A", font_color="#FFFFFF", font_size=13, bordercolor="#FFFFFF"),
-        legend=dict(font=dict(color="#0F172A")),
-        coloraxis_colorbar=dict(title=dict(font=dict(color="#0F172A")), tickfont=dict(color="#0F172A"))
+        title=dict(text=title, font=dict(size=18, color='#0F172A', weight='bold'), x=0.05),
+        template="plotly_white",
+        font=dict(family="Inter, sans-serif", size=12, color='#334155'),
+        margin=dict(l=80, r=50, t=100, b=80), # Margin Luas agar label tidak terpotong
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        height=height,
+        hovermode="x unified",
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)'
     )
-    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', zeroline=False, title_font=dict(color='#64748B', weight='bold'), tickfont=dict(color='#475569', weight='bold'))
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', zeroline=False, title_font=dict(color='#64748B', weight='bold'), tickfont=dict(color='#475569', weight='bold'))
+    fig.update_xaxes(showgrid=True, gridcolor='#F1F5F9', tickfont=dict(weight='bold'))
+    fig.update_yaxes(showgrid=True, gridcolor='#F1F5F9', tickfont=dict(weight='bold'))
     return fig
 
 # =====================================================================
-# 2. LOAD & PRE-PROCESS DATA
+# 2. DATA ENGINE
 # =====================================================================
 @st.cache_data
-def load_data():
+def load_and_clean():
     df = pd.read_excel('Dataset_Dashboard_Perfect.xlsx', engine='openpyxl')
+    # Clean NPS
     df['NPS_Score'] = df['G1A'].astype(str).str.extract(r'(\d+)').astype(float)
-    def categorize_nps(score):
-        if pd.isna(score): return 'Unknown'
-        if score >= 9: return 'Promoter'
-        elif score >= 7: return 'Passive'
-        else: return 'Detractor'
-    df['NPS_Category'] = df['NPS_Score'].apply(categorize_nps)
-    df['G1B'] = df['G1B'].fillna('')
+    def cat_nps(s):
+        if pd.isna(s): return 'Unknown'
+        return 'Promoter' if s >= 9 else ('Passive' if s >= 7 else 'Detractor')
+    df['NPS_Category'] = df['NPS_Score'].apply(cat_nps)
     return df
 
 try:
-    df_raw = load_data()
+    df_raw = load_and_clean()
 except Exception as e:
-    st.error(f"Gagal memuat data: {e}")
+    st.error(f"Gagal Load Data: {e}")
     st.stop()
 
 # =====================================================================
-# 3. SUPER SIDEBAR (CASCADING MULTI-SELECT FILTERS)
+# 3. SIDEBAR FILTERS (DYNAMIC & CASCADING)
 # =====================================================================
-st.sidebar.markdown("<h3 style='color: #2563EB !important; font-weight: 800;'>🎛️ Filter Analitik</h3>", unsafe_allow_html=True)
-st.sidebar.caption("Kosongkan box untuk melihat seluruh data secara makro.")
+with st.sidebar:
+    st.markdown("### 📊 Filter Strategis")
+    
+    # 1. Filter Regional
+    prov_sel = st.multiselect("Provinsi", sorted(df_raw['PROV'].dropna().unique()))
+    df_step = df_raw[df_raw['PROV'].isin(prov_sel)] if prov_sel else df_raw
+    
+    cabang_sel = st.multiselect("Cabang", sorted(df_step['CABANG'].dropna().unique()))
+    df_step = df_step[df_step['CABANG'].isin(cabang_sel)] if cabang_sel else df_step
+    
+    # 2. Filter Kompetitor (Sangat Penting untuk Benchmarking)
+    komp_options = sorted(df_raw['KOMP'].dropna().unique())
+    selected_bench_bank = st.selectbox("Pilih Kompetitor Utama untuk Benchmarking:", komp_options)
+    
+    st.markdown("---")
+    # 3. Demografi
+    gender_sel = st.multiselect("Gender", df_raw['S1'].unique())
+    age_sel = st.multiselect("Rentang Usia", sorted(df_raw['S2_2'].dropna().unique()))
+    
+# Final Filtered DataFrame
+df = df_step.copy()
+if gender_sel: df = df[df['S1'].isin(gender_sel)]
+if age_sel: df = df[df['S2_2'].isin(age_sel)]
 
-prov_options = sorted(df_raw['PROV'].dropna().unique().tolist())
-selected_prov = st.sidebar.multiselect("📍 Provinsi", prov_options, default=[])
-
-if selected_prov:
-    cabang_options = sorted(df_raw[df_raw['PROV'].isin(selected_prov)]['CABANG'].dropna().unique().tolist())
-else:
-    cabang_options = sorted(df_raw['CABANG'].dropna().unique().tolist())
-selected_cabang = st.sidebar.multiselect("🏢 Kantor Cabang", cabang_options, default=[])
-
-st.sidebar.markdown("---")
-selected_gender = st.sidebar.multiselect("🚻 Jenis Kelamin", sorted(df_raw['S1'].dropna().unique().tolist()), default=[])
-selected_age = st.sidebar.multiselect("🎂 Rentang Usia", sorted(df_raw['S2_2'].dropna().unique().tolist()), default=[])
-selected_tenure = st.sidebar.multiselect("⏳ Lama Hubungan (Tenure)", sorted(df_raw['S4'].dropna().unique().tolist()), default=[])
-selected_income = st.sidebar.multiselect("💰 Segmen Pendapatan", sorted(df_raw['P6'].dropna().unique().tolist()), default=[])
-
-# LOGIKA FILTERING DATAFRAME
-df = df_raw.copy()
-if selected_prov: df = df[df['PROV'].isin(selected_prov)]
-if selected_cabang: df = df[df['CABANG'].isin(selected_cabang)]
-if selected_gender: df = df[df['S1'].isin(selected_gender)]
-if selected_age: df = df[df['S2_2'].isin(selected_age)]
-if selected_tenure: df = df[df['S4'].isin(selected_tenure)]
-if selected_income: df = df[df['P6'].isin(selected_income)]
-
-st.sidebar.markdown("---")
-st.sidebar.success(f"📊 Menampilkan {len(df):,} Nasabah Terpilih")
-
-st.markdown("<h2 style='text-align: center; margin-bottom: 25px; font-weight: 900; letter-spacing: -1px; color: #0F172A !important;'>🏦 BANK XYZ - EXECUTIVE CX INTELLIGENCE</h2>", unsafe_allow_html=True)
-
-if df.empty:
-    st.warning("Peringatan: Kombinasi filter terlalu spesifik. Tidak ada nasabah di kriteria ini.")
-    st.stop()
+# Subset Data Kompetitor Spesifik (Untuk perbandingan IPA & Radar)
+df_komp_target = df_raw[df_raw['KOMP'] == selected_bench_bank]
 
 # =====================================================================
-# 4. TABS
+# 4. DASHBOARD LAYOUT
 # =====================================================================
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "🌟 Eksekutif", "👥 Demografi", "🏆 Brand & Kompetitor", 
-    "🎯 Matriks IPA", "🏢 Fasilitas & Digital", "💬 NLP Verbatim"
-])
+st.markdown(f"<h1 style='text-align: center; color: #0F172A;'>🏦 Bank XYZ Intelligence vs {selected_bench_bank}</h1>", unsafe_allow_html=True)
 
-# ---------------------------------------------------------------------
-# TAB 1: EXECUTIVE SUMMARY
-# ---------------------------------------------------------------------
+tab1, tab2, tab3, tab4 = st.tabs(["💎 Executive View", "🆚 Benchmarking", "🎯 IPA Strategy", "☁️ Voice of Customer"])
+
+# --- TAB 1: EXECUTIVE ---
 with tab1:
-    c1, c2, c3, c4 = st.columns(4)
-    c1.markdown(f"<div class='metric-card'><div class='metric-title'>Net Promoter Score (0-10)</div><div class='metric-value highlight'>{df['NPS_Score'].mean():.1f}</div></div>", unsafe_allow_html=True)
-    c2.markdown(f"<div class='metric-card'><div class='metric-title'>Loyalitas Inti (1-6)</div><div class='metric-value'>{df['Outcome_Loyalitas_Inti_XYZ'].mean():.2f}</div></div>", unsafe_allow_html=True)
-    c3.markdown(f"<div class='metric-card'><div class='metric-title'>Emosi Positif</div><div class='metric-value'>{df['Outcome_Emosi_Positif_XYZ'].mean():.2f}</div></div>", unsafe_allow_html=True)
-    c4.markdown(f"<div class='metric-card'><div class='metric-title'>Emosi Negatif (Makin Kecil Makin Baik)</div><div class='metric-value danger'>{df['Outcome_Emosi_Negatif_XYZ'].mean():.2f}</div></div>", unsafe_allow_html=True)
+    m1, m2, m3, m4 = st.columns(4)
+    # Kalkulasi Dinamis
+    nps_val = df['NPS_Score'].mean()
+    nps_prev = df_raw['NPS_Score'].mean() # Sebagai benchmark global
+    
+    m1.markdown(f"<div class='metric-card'><div class='metric-title'>Net Promoter Score</div><div class='metric-value' style='color:{COLORS['XYZ']}'>{nps_val:.1f}</div><div class='metric-delta' style='color:{COLORS['Success']}'>Global Avg: {nps_prev:.1f}</div></div>", unsafe_allow_html=True)
+    m2.markdown(f"<div class='metric-card'><div class='metric-title'>Loyalitas XYZ</div><div class='metric-value'>{df['Outcome_Loyalitas_Inti_XYZ'].mean():.2f}</div><div class='metric-delta'>Skala 1-6</div></div>", unsafe_allow_html=True)
+    m3.markdown(f"<div class='metric-card'><div class='metric-title'>Indeks Emosi Positif</div><div class='metric-value'>{df['Outcome_Emosi_Positif_XYZ'].mean():.2f}</div><div class='metric-delta'>Target: >5.0</div></div>", unsafe_allow_html=True)
+    m4.markdown(f"<div class='metric-card'><div class='metric-title'>Digital Adoption</div><div class='metric-value'>{df['Outcome_Persepsi_Digitalisasi'].mean():.2f}</div><div class='metric-delta'>Persepsi Cabang</div></div>", unsafe_allow_html=True)
+    
     st.markdown("<br>", unsafe_allow_html=True)
+    
+    c1, c2 = st.columns([1.5, 2.5])
+    with c1:
+        # Donut NPS kontras
+        fig_nps = px.pie(df, names='NPS_Category', hole=0.6, color='NPS_Category', color_discrete_map={'Promoter':'#10B981','Passive':'#F59E0B','Detractor':'#EF4444'})
+        st.plotly_chart(apply_pro_layout(fig_nps, "Sentimen Nasabah"), use_container_width=True)
+    with c2:
+        # Heatmap Korelasi Makro
+        corr_cols = ['Outcome_Loyalitas_Inti_XYZ', 'Outcome_Emosi_Positif_XYZ', 'Outcome_Persepsi_Digitalisasi', 'Overall_CS_XYZ', 'Overall_Teller_XYZ']
+        fig_corr = px.imshow(df[corr_cols].corr(), text_auto=".2f", color_continuous_scale='RdBu_r', labels=dict(color="Korelasi"))
+        st.plotly_chart(apply_pro_layout(fig_corr, "Faktor Pendorong Loyalitas (Correlation Matrix)"), use_container_width=True)
 
-    r2c1, r2c2 = st.columns([1.2, 2])
-    with r2c1:
-        nps_count = df[df['NPS_Category'] != 'Unknown']['NPS_Category'].value_counts().reset_index()
-        fig_nps = px.pie(nps_count, values='count', names='NPS_Category', hole=0.55, color='NPS_Category', color_discrete_map=nps_colors)
-        fig_nps = elite_layout(fig_nps, "Komposisi Sentimen NPS")
-        fig_nps.update_traces(textposition='outside', textinfo='percent+label', marker=dict(line=dict(color='#FFFFFF', width=2)))
-        st.plotly_chart(fig_nps, use_container_width=True)
-
-    with r2c2:
-        top_cabang = df.groupby('CABANG')['Outcome_Loyalitas_Inti_XYZ'].mean().sort_values(ascending=False).head(10).reset_index()
-        fig_cabang = px.bar(top_cabang, x='Outcome_Loyalitas_Inti_XYZ', y='CABANG', orientation='h', color_discrete_sequence=['#3B82F6'])
-        fig_cabang = elite_layout(fig_cabang, "Top 10 Cabang dg Loyalitas Nasabah Tertinggi")
-        fig_cabang.update_traces(texttemplate='%{x:.2f}', textposition='outside', marker_cornerradius=5)
-        fig_cabang.update_xaxes(range=[4, 6.5])
-        st.plotly_chart(fig_cabang, use_container_width=True)
-
-    r3c1, r3c2 = st.columns(2)
-    with r3c1:
-        fig_scatter = px.scatter(df, x="Outcome_Emosi_Positif_XYZ", y="Outcome_Loyalitas_Inti_XYZ", color="NPS_Category", color_discrete_map=nps_colors, hover_data=['CABANG'], trendline="ols")
-        fig_scatter = elite_layout(fig_scatter, "Korelasi: Emosi Positif vs Loyalitas Aktual")
-        fig_scatter.update_traces(marker=dict(size=8, opacity=0.7, line=dict(width=1, color='White')))
-        st.plotly_chart(fig_scatter, use_container_width=True)
-        
-    with r3c2:
-        macro_corr = df[['Outcome_Loyalitas_Inti_XYZ', 'Outcome_Emosi_Positif_XYZ', 'Outcome_Persepsi_Digitalisasi', 'Overall_CS_XYZ', 'Overall_Teller_XYZ']].corr()
-        fig_mcorr = px.imshow(macro_corr, text_auto=".2f", color_continuous_scale='Blues', aspect='auto')
-        fig_mcorr = elite_layout(fig_mcorr, "Matriks Korelasi Indikator Utama CX")
-        st.plotly_chart(fig_mcorr, use_container_width=True)
-
-# ---------------------------------------------------------------------
-# TAB 2: DEMOGRAFI & PROFIL
-# ---------------------------------------------------------------------
+# --- TAB 2: BENCHMARKING (RINGKAS & INSIGHTFUL) ---
 with tab2:
-    r1c1, r1c2, r1c3 = st.columns(3)
-    with r1c1:
-        fig_gender = px.pie(df, names='S1', hole=0.55, color_discrete_sequence=['#1E40AF', '#60A5FA'])
-        fig_gender.update_traces(marker=dict(line=dict(color='#FFFFFF', width=2)))
-        st.plotly_chart(elite_layout(fig_gender, "Proporsi Gender (S1)"), use_container_width=True)
-    with r1c2:
-        fig_age = px.bar(df['S2_2'].value_counts().reset_index(), x='S2_2', y='count', color_discrete_sequence=['#3B82F6'])
-        fig_age.update_traces(marker_cornerradius=5)
-        st.plotly_chart(elite_layout(fig_age, "Distribusi Kelompok Usia"), use_container_width=True)
-    with r1c3:
-        fig_tenure = px.bar(df['S4'].value_counts().reset_index(), x='count', y='S4', orientation='h', color_discrete_sequence=['#10B981'])
-        fig_tenure.update_traces(marker_cornerradius=5)
-        st.plotly_chart(elite_layout(fig_tenure, "Lama Menjadi Nasabah"), use_container_width=True)
-
-    r2c1, r2c2 = st.columns([2, 1])
-    with r2c1:
-        fig_tree = px.treemap(df, path=[px.Constant("Nasabah Nasional"), 'PROV', 'CABANG'], color='NPS_Score', color_continuous_scale='Blues')
-        fig_tree.update_traces(textfont=dict(color='#0F172A', size=14, weight='bold'), marker=dict(line=dict(color='white', width=2)))
-        st.plotly_chart(elite_layout(fig_tree, "Peta Geografis (Warna = Intensitas NPS)"), use_container_width=True)
-    with r2c2:
-        komp = df['KOMP'].replace(' ', np.nan).dropna().value_counts().head(5).reset_index()
-        fig_komp = px.pie(komp, names='KOMP', values='count', hole=0.55, color_discrete_sequence=px.colors.qualitative.Prism)
-        st.plotly_chart(elite_layout(fig_komp, "Top Kompetitor Utama"), use_container_width=True)
-
-# ---------------------------------------------------------------------
-# TAB 3: BRAND BENCHMARKING
-# ---------------------------------------------------------------------
-with tab3:
+    st.markdown(f"### 🚀 Performa Bank XYZ vs {selected_bench_bank}")
+    
+    # 1. MERGED OVERALL SCORES (Gambar 2 diperbaiki)
+    # Menampilkan semua touchpoint dalam satu bar chart grup
+    tp_labels = ['Satpam', 'Teller', 'Customer Service', 'ATM']
+    tp_xyz = [df['Overall_Satpam_XYZ'].mean(), df['Overall_Teller_XYZ'].mean(), df['Overall_CS_XYZ'].mean(), df['Overall_ATM_XYZ'].mean()]
+    tp_komp = [df_komp_target['Overall_Satpam_Komp'].mean(), df_komp_target['Overall_Teller_Komp'].mean(), df_komp_target['Overall_CS_Komp'].mean(), df_komp_target['Overall_ATM_Komp'].mean()]
+    
+    fig_overall = go.Figure(data=[
+        go.Bar(name='Bank XYZ', x=tp_labels, y=tp_xyz, marker_color=COLORS['XYZ'], text=np.round(tp_xyz, 2), textposition='auto'),
+        go.Bar(name=selected_bench_bank, x=tp_labels, y=tp_komp, marker_color=COLORS['Komp'], text=np.round(tp_komp, 2), textposition='auto')
+    ])
+    fig_overall.update_layout(barmode='group', yaxis_range=[0, 6.5])
+    st.plotly_chart(apply_pro_layout(fig_overall, "Touchpoint Performance Scoreboard"), use_container_width=True)
+    
+    # 2. RADAR BRAND POWER (Gambar 1 diperbaiki)
     c1, c2 = st.columns(2)
     brand_dim = ['Reputasi', 'Jaringan_Fisik', 'Digital_Channel', 'Finansial_Produk', 'Kemudahan_Solusi', 'Koneksi_Emosional']
     with c1:
-        fig_radar_brand = go.Figure()
-        fig_radar_brand.add_trace(go.Scatterpolar(r=[df[f'Kinerja_{d}_XYZ'].mean() for d in brand_dim], theta=brand_dim, fill='toself', name='Bank XYZ', line_color='#2563EB'))
-        fig_radar_brand.add_trace(go.Scatterpolar(r=[df[f'Kinerja_{d}_Komp'].mean() for d in brand_dim], theta=brand_dim, fill='toself', name='Kompetitor', line_color='#EF4444'))
-        fig_radar_brand.update_layout(polar=dict(radialaxis=dict(visible=True, range=[4, 6], gridcolor='#E2E8F0'), bgcolor='#F8FAFC'))
-        st.plotly_chart(elite_layout(fig_radar_brand, "Pemetaan Citra Merek (Brand Power)"), use_container_width=True)
-        
+        fig_radar = go.Figure()
+        fig_radar.add_trace(go.Scatterpolar(r=[df[f'Kinerja_{d}_XYZ'].mean() for d in brand_dim], theta=brand_dim, fill='toself', name='XYZ', line_color=COLORS['XYZ']))
+        fig_radar.add_trace(go.Scatterpolar(r=[df_komp_target[f'Kinerja_{d}_Komp'].mean() for d in brand_dim], theta=brand_dim, fill='toself', name=selected_bench_bank, line_color=COLORS['Komp']))
+        fig_radar.update_layout(polar=dict(radialaxis=dict(visible=True, range=[4, 6])), margin=dict(l=100, r=100, t=100, b=100))
+        st.plotly_chart(apply_pro_layout(fig_radar, "Radar Citra Merek (Brand Power)"), use_container_width=True)
     with c2:
-        atm_dim = ['Keamanan', 'Aksesibilitas_Ketersediaan', 'Keandalan_Mesin', 'Fitur_Fungsionalitas', 'Kenyamanan_Fisik']
-        fig_radar_atm = go.Figure()
-        fig_radar_atm.add_trace(go.Scatterpolar(r=[df[f'Kinerja_ATM_{d}_XYZ'].mean() for d in atm_dim], theta=atm_dim, fill='toself', name='ATM XYZ', line_color='#2563EB'))
-        fig_radar_atm.add_trace(go.Scatterpolar(r=[df[f'Kinerja_ATM_{d}_Komp'].mean() for d in atm_dim], theta=atm_dim, fill='toself', name='ATM Kompetitor', line_color='#EF4444'))
-        fig_radar_atm.update_layout(polar=dict(radialaxis=dict(visible=True, range=[4, 6], gridcolor='#E2E8F0'), bgcolor='#F8FAFC'))
-        st.plotly_chart(elite_layout(fig_radar_atm, "Perbandingan Daya Saing Mesin ATM"), use_container_width=True)
+        # Analisis Gap vs Kompetitor Terpilih
+        gap_vals = np.array(tp_xyz) - np.array(tp_komp)
+        fig_gap = px.bar(x=tp_labels, y=gap_vals, color=gap_vals > 0, 
+                         color_discrete_map={True: COLORS['Success'], False: COLORS['Komp']},
+                         labels={'x':'Layanan','y':'Gap Score'})
+        st.plotly_chart(apply_pro_layout(fig_gap, f"Win/Loss Gap vs {selected_bench_bank}"), use_container_width=True)
 
-    df_gap_brand = pd.DataFrame({'Dimensi': brand_dim, 'Harapan': [df[f'Harapan_{d}'].mean() for d in brand_dim], 'Kinerja XYZ': [df[f'Kinerja_{d}_XYZ'].mean() for d in brand_dim]}).melt(id_vars='Dimensi', var_name='Metrik', value_name='Skor')
-    fig_gap_brand = px.bar(df_gap_brand, x='Dimensi', y='Skor', color='Metrik', barmode='group', color_discrete_map={'Harapan':'#94A3B8', 'Kinerja XYZ':'#3B82F6'})
-    fig_gap_brand.update_traces(texttemplate='%{y:.2f}', textposition='outside', marker_cornerradius=3)
-    fig_gap_brand.update_yaxes(range=[4.5, 6])
-    st.plotly_chart(elite_layout(fig_gap_brand, "Analisis Kesenjangan: Harapan vs Kinerja Brand XYZ"), use_container_width=True)
-
-# ---------------------------------------------------------------------
-# TAB 4: FRONTLINER & MATRIKS IPA INTERAKTIF 
-# ---------------------------------------------------------------------
-with tab4:
-    c1, c2, c3 = st.columns(3)
-    c1.plotly_chart(elite_layout(px.bar(x=['XYZ', 'Komp'], y=[df['Overall_Satpam_XYZ'].mean(), df['Overall_Satpam_Komp'].mean()], color=['XYZ','Komp'], color_discrete_sequence=['#2563EB', '#F43F5E']).update_layout(showlegend=False), "Overall Skor Satpam").update_traces(marker_cornerradius=5), use_container_width=True)
-    c2.plotly_chart(elite_layout(px.bar(x=['XYZ', 'Komp'], y=[df['Overall_Teller_XYZ'].mean(), df['Overall_Teller_Komp'].mean()], color=['XYZ','Komp'], color_discrete_sequence=['#2563EB', '#F43F5E']).update_layout(showlegend=False), "Overall Skor Teller").update_traces(marker_cornerradius=5), use_container_width=True)
-    c3.plotly_chart(elite_layout(px.bar(x=['XYZ', 'Komp'], y=[df['Overall_CS_XYZ'].mean(), df['Overall_CS_Komp'].mean()], color=['XYZ','Komp'], color_discrete_sequence=['#2563EB', '#F43F5E']).update_layout(showlegend=False), "Overall Skor CS").update_traces(marker_cornerradius=5), use_container_width=True)
-
-    st.markdown("---")
-    st.markdown("<h3 style='color:#0F172A; font-weight:800;'>🎯 Matriks IPA (Importance-Performance Analysis)</h3>", unsafe_allow_html=True)
+# --- TAB 3: IPA STRATEGY (ULTIMATE INTERACTIVE) ---
+with tab3:
+    st.markdown("### 🎯 Competitive IPA Matrix")
+    st.caption("Membandingkan Kepentingan (Harapan) dengan Kinerja XYZ dan Kompetitor Pilihan.")
     
-    segmen_ipa = st.selectbox("Pilih Touchpoint untuk Dibedah:", ["Customer Service", "Teller", "Satpam", "Fasilitas Cabang"])
+    target_tp = st.selectbox("Pilih Dimensi Layanan:", ["Customer Service", "Teller", "Satpam", "Fasilitas"])
     
-    ipa_data = []
-    if segmen_ipa == "Customer Service":
-        dims = ['Antrian_Ketersediaan', 'Kecepatan_Kehandalan', 'Kompetensi_Solusi', 'Edukasi_Digital', 'Sikap_Keramahan', 'Cross_Selling', 'Penampilan_Atribut']
-        for d in dims: ipa_data.append({'Indikator': d.replace('_', ' '), 'Harapan': df[f'Harapan_CS_{d}'].mean(), 'Kinerja': df[f'Kinerja_CS_{d}_XYZ'].mean()})
-    elif segmen_ipa == "Teller":
-        dims = ['Antrian_Ketersediaan', 'Kecepatan_Akurasi', 'Sikap_Keramahan', 'Edukasi_Digital', 'Penampilan_Atribut']
-        for d in dims: ipa_data.append({'Indikator': d.replace('_', ' '), 'Harapan': df[f'Harapan_Teller_{d}'].mean(), 'Kinerja': df[f'Kinerja_Teller_{d}_XYZ'].mean()})
-    elif segmen_ipa == "Satpam":
-        pairs = [("Penampilan", "Harapan_Penampilan_Satpam", "Kinerja_Penampilan_Satpam_XYZ"), ("Sikap Keramahan", "Harapan_Sikap_Keramahan_Satpam", "Kinerja_Sikap_Keramahan_Satpam_XYZ"), ("Kompetensi Tugas", "Harapan_Kompetensi_Tugas_Satpam", "Kinerja_Kompetensi_Tugas_Satpam_XYZ"), ("Kesiapan Kehadiran", "Harapan_Kesiapan_Kehadiran_Satpam", "Kinerja_Kesiapan_Kehadiran_Satpam_XYZ")]
-        for l, h, k in pairs: ipa_data.append({'Indikator': l, 'Harapan': df[h].mean(), 'Kinerja': df[k].mean()})
-    elif segmen_ipa == "Fasilitas Cabang":
-        pairs = [("Akses Eksterior", "Harapan_Akses_Eksterior", "Kinerja_Akses_Eksterior_XYZ"), ("Parkir", "Harapan_Parkir", "Kinerja_Parkir_XYZ"), ("Banking Hall", "Harapan_BankingHall_Inti", "Kinerja_BankingHall_Inti_XYZ"), ("Fasilitas Ekstra", "Harapan_Fasilitas_Ekstra", "Kinerja_Fasilitas_Ekstra_XYZ"), ("Toilet", "Harapan_Toilet", "Kinerja_Toilet_XYZ")]
-        for l, h, k in pairs: ipa_data.append({'Indikator': l, 'Harapan': df[h].mean(), 'Kinerja': df[k].mean()})
-
-    df_ipa = pd.DataFrame(ipa_data)
-    df_ipa['Gap'] = df_ipa['Kinerja'] - df_ipa['Harapan']
+    # Data Mapping Dinamis
+    ipa_map = {
+        "Customer Service": ['Antrian_Ketersediaan', 'Kecepatan_Kehandalan', 'Kompetensi_Solusi', 'Sikap_Keramahan', 'Penampilan_Atribut'],
+        "Teller": ['Antrian_Ketersediaan', 'Kecepatan_Akurasi', 'Sikap_Keramahan', 'Penampilan_Atribut'],
+        "Satpam": ['Penampilan_Satpam', 'Sikap_Keramahan_Satpam', 'Kompetensi_Tugas_Satpam', 'Kesiapan_Kehadiran_Satpam'],
+        "Fasilitas": ['Akses_Eksterior', 'Parkir', 'BankingHall_Inti', 'Toilet']
+    }
     
-    r3c1, r3c2 = st.columns([1.5, 1])
-    with r3c1:
-        fig_ipa = px.scatter(df_ipa, x="Kinerja", y="Harapan", text="Indikator", size_max=20, size=[1]*len(df_ipa), color_discrete_sequence=['#3B82F6'])
-        fig_ipa = elite_layout(fig_ipa, f"Matriks Kuadran Strategis: {segmen_ipa}")
-        fig_ipa.update_traces(textposition='top center', marker=dict(size=14, opacity=0.9, line=dict(width=2, color='#0F172A')))
-        m_k, m_h = df_ipa['Kinerja'].mean(), df_ipa['Harapan'].mean()
-        fig_ipa.add_vline(x=m_k, line_dash="dash", line_color="#E11D48", line_width=2)
-        fig_ipa.add_hline(y=m_h, line_dash="dash", line_color="#E11D48", line_width=2)
-        
-        # Penambahan Label Kuadran Estetik
-        fig_ipa.add_annotation(x=min(df_ipa['Kinerja']), y=max(df_ipa['Harapan']), text="⚠️ PERBAIKI SEGERA", showarrow=False, font=dict(color="#E11D48", size=11, weight='bold'), bgcolor="rgba(255,255,255,0.7)")
-        fig_ipa.add_annotation(x=max(df_ipa['Kinerja']), y=max(df_ipa['Harapan']), text="🌟 PERTAHANKAN (STRENGTH)", showarrow=False, font=dict(color="#10B981", size=11, weight='bold'), bgcolor="rgba(255,255,255,0.7)")
-        st.plotly_chart(fig_ipa, use_container_width=True)
-        
-    with r3c2:
-        df_ipa = df_ipa.sort_values(by='Gap', ascending=True)
-        df_ipa['Warna'] = np.where(df_ipa['Gap'] < 0, '#E11D48', '#10B981')
-        fig_gap = px.bar(df_ipa, x='Gap', y='Indikator', orientation='h', text_auto='.2f')
-        fig_gap = elite_layout(fig_gap, f"Kesenjangan (Gap) Aktual")
-        fig_gap.update_traces(marker_color=df_ipa['Warna'], textposition='outside', marker_cornerradius=3)
-        st.plotly_chart(fig_gap, use_container_width=True)
-
-# ---------------------------------------------------------------------
-# TAB 5: FASILITAS & DIGITALISASI
-# ---------------------------------------------------------------------
-with tab5:
-    c1, c2 = st.columns(2)
-    with c1:
-        kc_dim = ['Akses_Eksterior', 'Parkir', 'BankingHall_Inti', 'Fasilitas_Ekstra', 'Kemudahan_Eform', 'Toilet']
-        df_kc = pd.DataFrame({'Dimensi': kc_dim, 'Bank XYZ': [df[f'Kinerja_{d}_XYZ'].mean() for d in kc_dim], 'Kompetitor': [df[f'Kinerja_{d}_Komp'].mean() for d in kc_dim]}).melt(id_vars='Dimensi', var_name='Bank', value_name='Skor')
-        fig_kc = px.bar(df_kc, x='Dimensi', y='Skor', color='Bank', barmode='group', color_discrete_map={'Bank XYZ':'#2563EB', 'Kompetitor':'#F43F5E'})
-        fig_kc.update_yaxes(range=[4.5, 6])
-        st.plotly_chart(elite_layout(fig_kc, "Komparasi Kinerja Fasilitas Fisik"), use_container_width=True)
-        
-    with c2:
-        sl_dim = ['Smart_Tab', 'Signage_Table_Santer', 'Pinpad_Frontliner', 'Mesin_CRM_TCR']
-        df_sl = pd.DataFrame({'Perangkat Digital': sl_dim, 'Skor': [df[f'Kinerja_SL_{d}_XYZ'].mean() for d in sl_dim]})
-        fig_sl = px.bar(df_sl, x='Perangkat Digital', y='Skor', color_discrete_sequence=['#0EA5E9'], text_auto='.2f')
-        fig_sl.update_yaxes(range=[4.5, 6])
-        fig_sl.update_traces(marker_cornerradius=5)
-        st.plotly_chart(elite_layout(fig_sl, "Utilitas Perangkat Smart Layanan XYZ"), use_container_width=True)
-
-    c3, c4 = st.columns(2)
-    with c3:
-        if 'D2' in df.columns:
-            eform = df['D2'].dropna().value_counts().reset_index()
-            fig_eform = px.pie(eform, names='D2', values='count', hole=0.55, color_discrete_sequence=['#8B5CF6', '#D946EF', '#F43F5E'])
-            st.plotly_chart(elite_layout(fig_eform, "Adopsi Pembukaan Rekening via E-Form"), use_container_width=True)
-    with c4:
-        fig_dig_emo = px.scatter(df, x="Outcome_Persepsi_Digitalisasi", y="Outcome_Emosi_Positif_XYZ", color="S2_2", trendline="ols")
-        st.plotly_chart(elite_layout(fig_dig_emo, "Dampak Digitalisasi Terhadap Emosi Nasabah"), use_container_width=True)
-
-# ---------------------------------------------------------------------
-# TAB 6: VOICE OF CUSTOMER (NLP & VERBATIM)
-# ---------------------------------------------------------------------
-with tab6:
-    st.markdown("<h4 style='color:#0F172A;'>💬 Analisis Sentimen & Teks Alami (NLP)</h4>", unsafe_allow_html=True)
+    # Menghitung Data IPA
+    plot_data = []
+    prefix = "CS" if target_tp == "Customer Service" else ("Teller" if target_tp == "Teller" else "")
     
-    fig_hist_nps = px.histogram(df, x='NPS_Score', nbins=10, color='NPS_Category', color_discrete_map=nps_colors)
-    st.plotly_chart(elite_layout(fig_hist_nps, "Volume Penilaian Berdasarkan Skor Absolut (0-10)"), use_container_width=True)
-    st.markdown("---")
-    
-    all_text = " ".join(df['G1B'].dropna().astype(str).tolist()).lower()
-    if len(all_text.strip()) > 10:
-        r2c1, r2c2 = st.columns(2)
-        with r2c1:
-            st.markdown("<p style='font-weight:700; color:#0F172A;'>☁️ Pemetaan Topik: Seluruh Nasabah</p>", unsafe_allow_html=True)
-            wordcloud_all = WordCloud(width=800, height=450, background_color='#F8FAFC', colormap='Blues', max_words=100).generate(all_text)
-            fig_wc_all, ax_all = plt.subplots(figsize=(8, 4.5))
-            ax_all.imshow(wordcloud_all, interpolation='bilinear')
-            ax_all.axis('off'); fig_wc_all.patch.set_facecolor('#F8FAFC')
-            st.pyplot(fig_wc_all)
+    for dim in ipa_map[target_tp]:
+        if target_tp in ["Customer Service", "Teller"]:
+            h = df[f'Harapan_{prefix}_{dim}'].mean()
+            k_xyz = df[f'Kinerja_{prefix}_{dim}_XYZ'].mean()
+            k_komp = df_komp_target[f'Kinerja_{prefix}_{dim}_Komp'].mean()
+        else:
+            h = df[f'Harapan_{dim}'].mean()
+            k_xyz = df[f'Kinerja_{dim}_XYZ'].mean()
+            k_komp = df_komp_target[f'Kinerja_{dim}_Komp'].mean()
             
-        with r2c2:
-            st.markdown("<p style='font-weight:700; color:#E11D48;'>🛑 Titik Kritis: Kata Kunci Nasabah Kecewa (Detractor)</p>", unsafe_allow_html=True)
-            detractor_text = " ".join(df[df['NPS_Category'] == 'Detractor']['G1B'].dropna().astype(str).tolist()).lower()
-            if len(detractor_text.strip()) > 5:
-                wordcloud_det = WordCloud(width=800, height=450, background_color='#F8FAFC', colormap='Reds', max_words=80).generate(detractor_text)
-                fig_wc_det, ax_det = plt.subplots(figsize=(8, 4.5))
-                ax_det.imshow(wordcloud_det, interpolation='bilinear')
-                ax_det.axis('off'); fig_wc_det.patch.set_facecolor('#F8FAFC')
-                st.pyplot(fig_wc_det)
-            else:
-                st.info("💡 Insight: Sentimen negatif sangat rendah pada irisan data ini.")
-                
-        words = re.findall(r'\b[a-zA-Z]{4,}\b', all_text)
-        stopwords_id = ['yang','untuk','dengan','pada','dari','sebagai','tidak','karena','sangat','lebih','sudah','saya','bank','bisa','dan','di','ke']
-        words_clean = [w for w in words if w not in stopwords_id]
-        if words_clean:
-            word_counts = Counter(words_clean).most_common(10)
-            df_words = pd.DataFrame(word_counts, columns=['Terminologi', 'Frekuensi']).sort_values(by='Frekuensi', ascending=True)
-            fig_bar_words = px.bar(df_words, x='Frekuensi', y='Terminologi', orientation='h', text='Frekuensi', color_discrete_sequence=['#3B82F6'])
-            fig_bar_words = elite_layout(fig_bar_words, "10 Terminologi Paling Sering Diutarakan")
-            fig_bar_words.update_traces(textposition='outside', marker_cornerradius=5)
-            st.plotly_chart(fig_bar_words, use_container_width=True)
+        plot_data.append({'Atribut': dim.replace('_', ' '), 'Importance': h, 'XYZ': k_xyz, 'Competitor': k_komp})
+    
+    df_ipa = pd.DataFrame(plot_data)
+    
+    # Plotly Scatter IPA
+    fig_ipa = go.Figure()
+    # Tambahkan XYZ Points
+    fig_ipa.add_trace(go.Scatter(x=df_ipa['XYZ'], y=df_ipa['Importance'], mode='markers+text', 
+                                 text=df_ipa['Atribut'], name='Bank XYZ', marker=dict(size=15, color=COLORS['XYZ'])))
+    # Tambahkan Kompetitor Points (sebagai 'X' atau simbol lain untuk kontras)
+    fig_ipa.add_trace(go.Scatter(x=df_ipa['Competitor'], y=df_ipa['Importance'], mode='markers', 
+                                 name=selected_bench_bank, marker=dict(size=12, symbol='x', color=COLORS['Komp'])))
+    
+    # Draw Quadrant Lines (XYZ Based)
+    avg_perf = df_ipa['XYZ'].mean()
+    avg_imp = df_ipa['Importance'].mean()
+    fig_ipa.add_vline(x=avg_perf, line_dash="dash", line_color="#94A3B8")
+    fig_ipa.add_hline(y=avg_imp, line_dash="dash", line_color="#94A3B8")
+    
+    # Quadrant Labels
+    fig_ipa.add_annotation(x=avg_perf-0.2, y=avg_imp+0.2, text="URGENT (Kinerja Rendah, Harapan Tinggi)", showarrow=False, font=dict(color="red"))
+    fig_ipa.add_annotation(x=avg_perf+0.2, y=avg_imp+0.2, text="STRENGTH (Pertahankan)", showarrow=False, font=dict(color="green"))
+    
+    st.plotly_chart(apply_pro_layout(fig_ipa, f"Competitive IPA Matrix: XYZ vs {selected_bench_bank}"), use_container_width=True)
+    
+    # Insight Section
+    st.info(f"💡 **Key Insight:** Atribut yang titik Birunya (XYZ) berada di sebelah kiri titik Merah ({selected_bench_bank}) adalah area di mana Anda tertinggal secara kompetitif.")
 
-    st.markdown("<h4 style='color:#0F172A; margin-top:20px;'>🔍 Log Penelusuran Verbatim</h4>", unsafe_allow_html=True)
-    filter_voC = st.radio("Saring Konteks Percakapan:", ["Fokus Detractor & Passive (Area Perbaikan)", "Lihat Seluruh Komentar"], horizontal=True)
-    vocab_df = df if filter_voC == "Lihat Seluruh Komentar" else df[df['NPS_Category'].isin(['Detractor', 'Passive'])]
-    st.dataframe(vocab_df[['CABANG', 'S1', 'S2_2', 'NPS_Score', 'NPS_Category', 'G1B']].sort_values(by='NPS_Score'), use_container_width=True, height=250, hide_index=True)
+# --- TAB 4: VOC ---
+with tab4:
+    st.markdown("### 💬 Voice of Customer & NLP")
+    c1, c2 = st.columns(2)
+    # WordCloud
+    with c1:
+        text = " ".join(df['G1B'].astype(str))
+        wc = WordCloud(width=800, height=400, background_color='white', colormap='Blues').generate(text)
+        fig_wc, ax = plt.subplots()
+        ax.imshow(wc, interpolation='bilinear'); ax.axis('off')
+        st.pyplot(fig_wc)
+    with c2:
+        # Analisis Sentimen Sederhana / Top Kata
+        words = re.findall(r'\b\w{4,}\b', text.lower())
+        stop = ['yang','dengan','pada','untuk','bank','nasabah','sudah','saya']
+        top_words = Counter([w for w in words if w not in stop]).most_common(10)
+        df_top = pd.DataFrame(top_words, columns=['Kata', 'Frekuensi'])
+        st.plotly_chart(apply_pro_layout(px.bar(df_top, x='Frekuensi', y='Kata', orientation='h'), "Top Keyword Feedback"), use_container_width=True)
 
 st.markdown("---")
-st.caption("🚀 Developed with Streamlit & Plotly | Ultra-Premium Analytics Platform")
+st.caption("🚀 V4 Ultimate CX Dashboard | Built for Bank XYZ Executive Strategy")
