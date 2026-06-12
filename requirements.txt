@@ -11,3 +11,4 @@ wordcloud
 nltk
 Sastrawi
 statsmodels
+google-generativeai
