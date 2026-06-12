@@ -185,7 +185,12 @@ def elo(fig, title="", h=None):
                      automargin=True, tickfont=dict(color='#94A3B8'))
     fig.update_yaxes(showgrid=True, gridcolor=GRID, zeroline=False,
                      automargin=True, tickfont=dict(color='#94A3B8'))
-    fig.update_traces(cliponaxis=False) # Mencegah teks terpotong di tepi chart
+    
+    # PERBAIKAN: Hanya terapkan cliponaxis pada chart bersumbu (Cartesian)
+    fig.update_traces(cliponaxis=False, selector=dict(type='bar'))
+    fig.update_traces(cliponaxis=False, selector=dict(type='scatter'))
+    fig.update_traces(cliponaxis=False, selector=dict(type='box'))
+    
     return fig
 
 def slbl(col, col_map, n=36):
