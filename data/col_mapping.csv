@@ -1,0 +1,634 @@
+﻿kode,nama_panjang
+SERIAL,Serial ID
+PROV,Provinsi
+KABKOTA,Kab / Kota
+CABANG,NAMA KANTOR CABANG
+S1,Jenis kelamin
+S2_1,Berapa tahun usia Anda? __ tahun
+S2_2,Range Usia
+S3,Apakah Bapak/Ibu merupakan nasabah (pemilik rekening) di Bank XYZ?
+S4,Sudah berapa lamakah Bapak/Ibu menjadi nasabah Bank XYZ?
+S5,Apakah Bapak/Ibu atau salah satu anggota keluarga ada yang bekerja di bank?
+S6,"Dari tabel di bawah ini, masuk ke dalam kategori apakah Bapak/Ibu saat ini?"
+S_S6_10,Others
+,Unnamed: 12
+S7,"Seberapa sering Bapak/Ibu melakukan transaksi dengan Bank XYZ, baik secara online dengan mobile banking atau datang ke kantor cabang Bank XYZ ?"
+A1A,Bank mana saja yang saat ini masih aktif Bapak/Ibu gunakan?
+S_A1A_23,Others.1
+S_A1A_24,Others.2
+A1AX,Bank mana saja yang saat ini masih aktif Bapak/Ibu gunakan? SELAIN XYZ
+S_A1AX_23,Others.3
+S_A1AX_24,Others.4
+A1B,Bank manakah yang merupakan rekening utama untuk Bapak/Ibu menyimpan dana?
+A1XX,Kompetitor terpilih
+A1C,"Bank manakah yang merupakan rekening utama untuk Bapak/Ibu bertransaksi (belanja, transfer, dsb)?"
+A1X,Kompetitor terpilih.1
+A2,Apa tujuan Anda pertama kali membuka rekening di Bank XYZ ? Apa lagi? Apa lagi?
+S_A2_6,Others.5
+B3,Mengapa anda menggunakan Bank {0} sebagai bank yang paling sering digunakan untuk bertransaksi? Apa lagi? Apa lagi?
+S_B3_11,Others.6
+B4,Mengapa anda menggunakan Bank {0} sebagai bank yang digunakan untuk menyimpan dana utama anda? Apa lagi? Apa lagi?
+S_B4_13,Others.7
+KOMP,Kompetitor terpilih.2
+B1,Apakah motivasi Anda dalam membuka rekening tabungan di bank?
+S_B1_13,Others.8
+T_C1A_1,Bank yang terkenal/terkemuka
+T_C1A_2,Bank yang digunakan banyak orang
+T_C1A_3,Bank yang membuat saya merasa aman
+T_C1A_4,Bank yang membuat saya merasa dihargai menjadi nasabah bank ini
+T_C1A_5,Bank yang memiliki banyak ATM
+T_C1A_6,Bank yang memiliki banyak kantor cabang
+T_C1A_7,Bank yang memiliki reputasi yang baik
+T_C1A_8,Bank yang menawarkan produk/layanan yang lengkap
+T_C1A_9,Menyediakan layanan online terkait dengan informasi produk
+T_C1A_10,"Menyediakan banyak channel (call center, sms, email, dsb) untuk nasabah menyampaikan keluhan/saran"
+T_C1A_11,Bank yang menguntungkan untuk investasi/pengembangan kekayaan/uang saya
+T_C1A_12,Bank yang membuat saya merasa bangga karena produk/layanan/promo yang tidak saya dapatkan dari bank lain
+T_C1A_13,Bank yang membuat saya merasa percaya diri dan dapat mengontrol penuh kebutuhan transaksi perbankan saya
+T_C1A_14,Bank yang membuat saya merasa prestigious/bergengsi
+T_C1A_15,Bank yang memberikan kemudahan untuk bertransaksi dimanapun dan kapanpun
+T_C1A_16,Bank yang mempermudah bisnis saya
+T_C1A_17,Bank yang memberikan banyak kemudahan
+T_C1A_18,Bank yang memiliki kinerja bisnis yang baik
+T_C1A_19,Bank yang selalu menggunakan teknologi terbaru
+T_C1A_20,Bank yang dimiliki oleh negara
+T_C1A_21,Bank swasta terbesar di Indonesia
+T_C1A_22,"Memberikan keuntungan saat digunakan untuk bertransaksi (diskon, cashback, point rewards)"
+T_C1A_23,"Memiliki fitur transaksi di e-channel lengkap (ATM, mobile banking, internet banking) lengkap"
+T_C1A_24,Bank dengan segala produk dan fasilitas yang membuat saya merasa cukup dengan menjadi nasabah satu bank saja
+T_C1B_2,Bank yang terkenal/terkemuka - XYZ
+T_C1B_5,Bank yang digunakan banyak orang - XYZ
+T_C1B_8,Bank yang membuat saya merasa aman - XYZ
+T_C1B_11,Bank yang membuat saya merasa dihargai menjadi nasabah bank ini - XYZ
+T_C1B_14,Bank yang memiliki banyak ATM - XYZ
+T_C1B_17,Bank yang memiliki banyak kantor cabang - XYZ
+T_C1B_20,Bank yang memiliki reputasi yang baik - XYZ
+T_C1B_23,Bank yang menawarkan produk/layanan yang lengkap - XYZ
+T_C1B_26,Menyediakan layanan online terkait dengan informasi produk - XYZ
+T_C1B_29,"Menyediakan banyak channel (call center, sms, email, dsb) untuk nasabah menyampaikan keluhan/saran - XYZ"
+T_C1B_32,Bank yang menguntungkan untuk investasi/pengembangan kekayaan/uang saya - XYZ
+T_C1B_35,Bank yang membuat saya merasa bangga karena produk/layanan/promo yang tidak saya dapatkan dari bank lain - XYZ
+T_C1B_38,Bank yang membuat saya merasa percaya diri dan dapat mengontrol penuh kebutuhan transaksi perbankan saya - XYZ
+T_C1B_41,Bank yang membuat saya merasa prestigious/bergengsi - XYZ
+T_C1B_44,Bank yang memberikan kemudahan untuk bertransaksi dimanapun dan kapanpun - XYZ
+T_C1B_47,Bank yang mempermudah bisnis saya - XYZ
+T_C1B_50,Bank yang memberikan banyak kemudahan - XYZ
+T_C1B_53,Bank yang memiliki kinerja bisnis yang baik - XYZ
+T_C1B_56,Bank yang selalu menggunakan teknologi terbaru - XYZ
+T_C1B_59,Bank yang dimiliki oleh negara - XYZ
+T_C1B_62,Bank swasta terbesar di Indonesia - XYZ
+T_C1B_65,"Memberikan keuntungan saat digunakan untuk bertransaksi (diskon, cashback, point rewards) - XYZ"
+T_C1B_68,"Memiliki fitur transaksi di e-channel lengkap (ATM, mobile banking, internet banking) lengkap - XYZ"
+T_C1B_71,Bank dengan segala produk dan fasilitas yang membuat saya merasa cukup dengan menjadi nasabah satu bank saja - XYZ
+T_C1B_3,Bank yang terkenal/terkemuka - kompetitor
+T_C1B_6,Bank yang digunakan banyak orang - kompetitor
+T_C1B_9,Bank yang membuat saya merasa aman - kompetitor
+T_C1B_12,Bank yang membuat saya merasa dihargai menjadi nasabah bank ini - kompetitor
+T_C1B_15,Bank yang memiliki banyak ATM - kompetitor
+T_C1B_18,Bank yang memiliki banyak kantor cabang - kompetitor
+T_C1B_21,Bank yang memiliki reputasi yang baik - kompetitor
+T_C1B_24,Bank yang menawarkan produk/layanan yang lengkap - kompetitor
+T_C1B_27,Menyediakan layanan online terkait dengan informasi produk - kompetitor
+T_C1B_30,"Menyediakan banyak channel (call center, sms, email, dsb) untuk nasabah menyampaikan keluhan/saran - kompetitor"
+T_C1B_33,Bank yang menguntungkan untuk investasi/pengembangan kekayaan/uang saya - kompetitor
+T_C1B_36,Bank yang membuat saya merasa bangga karena produk/layanan/promo yang tidak saya dapatkan dari bank lain - kompetitor
+T_C1B_39,Bank yang membuat saya merasa percaya diri dan dapat mengontrol penuh kebutuhan transaksi perbankan saya - kompetitor
+T_C1B_42,Bank yang membuat saya merasa prestigious/bergengsi - kompetitor
+T_C1B_45,Bank yang memberikan kemudahan untuk bertransaksi dimanapun dan kapanpun - kompetitor
+T_C1B_48,Bank yang mempermudah bisnis saya - kompetitor
+T_C1B_51,Bank yang memberikan banyak kemudahan - kompetitor
+T_C1B_54,Bank yang memiliki kinerja bisnis yang baik - kompetitor
+T_C1B_57,Bank yang selalu menggunakan teknologi terbaru - kompetitor
+T_C1B_60,Bank yang dimiliki oleh negara - kompetitor
+T_C1B_63,Bank swasta terbesar di Indonesia - kompetitor
+T_C1B_66,"Memberikan keuntungan saat digunakan untuk bertransaksi (diskon, cashback, point rewards) - kompetitor"
+T_C1B_69,"Memiliki fitur transaksi di e-channel lengkap (ATM, mobile banking, internet banking) lengkap - kompetitor"
+T_C1B_72,Bank dengan segala produk dan fasilitas yang membuat saya merasa cukup dengan menjadi nasabah satu bank saja - kompetitor
+D1,Jenis layanan Teller/Customer Service (CS) yang saat ini baru selesai dialami adalah:
+S_D1_17,Others.9
+S_D1_18,Others.10
+S_D1_19,Others.11
+D2,Apakah Bapak/Ibu sudah menggunakan e-form (formulir elektronik) untuk pembukaan rekening baru?
+D3,Mengapa Bapak / Ibu tidak menggunakan e-form (formulir elektronik) untuk pembukaan rekening?
+D4,Apakah Bapak/Ibu mengetahui perihal adanya e-form (formulir elektronik) untuk pembukaan rekening baru?
+D5,"Ketika anda berkunjung ke {0}, dengan staf siapa Anda pernah/sering bertemu atau berinteraksi di {0} tersebut?"
+PANEL,PANEL TRANSAKSI
+T_KC1_1,Kantor cabangnya banyak (dekat dengan tempat tinggal dan atau tempat kerja saya)
+T_KC1_2,Menyediakan layanan weekend banking
+T_KC1_3,"Penampilan luar bangunan cabang dan papan nama cabang dalam keadaan bersih, jelas dan terawat"
+T_KC1_4,Tersedia area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir
+T_KC1_5,Ada petugas Sekuriti yang mengatur di area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir
+T_KC1_6,"Petunjuk arah parkir untuk nasabah  yang jelas dan bersih (petunjuk arah, tanda-tanda seperti âarea parkir mobilâ, âarea parkir motorâ"
+T_KC1_7,Kebersihan di area parkir
+T_KC1_8,Kebersihan pada area masuk cabang
+T_KC1_9,"Kebersihan dan kenyamanan area Banking Hall (kursi ruang tunggu, AC, TV, Pencahayaan, harum, dll)"
+T_KC1_10,Tersedia tempat duduk yang cukup di ruang tunggu
+T_KC1_11,Pendingin ruangan di ruang tunggu sejuk
+T_KC1_12,Ruang tunggu nyaman
+T_KC1_13,Disediakan Wifi gratis di ruang tunggu
+T_KC1_14,Tersedia TV di ruang tunggu
+T_KC1_15,Area ruang tunggunya wangi
+T_KC1_16,Diputarkan lagu lembut yang mengalun di area banking hall
+T_KC1_17,Banking hall/area ruang tunggunya bersih
+T_KC1_18,Terdapat tempat sampah dan mudah ditemukan
+T_KC1_19,"Tersedia penunjuk arah ruang pelayanan nasabah yang jelas/mudah terlihat (CS, Teller, Toilet, dan bisnis unit lainnya)"
+T_KC1_20,"Area ruang Tertata dengan baik, rapi dan teratur"
+T_KC1_21,Tata letak di kantor cabang mudah untuk diikuti dan mudah untuk menemukan sesuatu yang dibutuhkan
+T_KC1_22,Terdapat tanaman hidup
+T_KC1_23,Tersedianya ruang laktasi
+T_KC1_24,Kemudahan mengisi data-data pembukaan rekening baru pada e-form (formulir elektronik)
+T_KC1_25,Terdapat petunjuk arah ke toilet
+T_KC1_26,Terdapat toilet di cabang
+T_KC1_27,Toilet bersih
+T_KC1_28,Toilet selalu harum dan tidak bau
+T_KC1_29,Tersedia wastafel di area toilet
+T_KC1_30,Selalu tersedia tisu di toilet
+T_KC1_31,Selalu tersedia sabun pencuci tangan di toilet
+T_KC1_32,Air selalu mengalir dengan lancar di semua keran yang ada di toilet
+T_KC1_33,Toilet selalu berfungsi dengan baik
+T_KC1_34,Terdapat tempat sampah di toilet dan mudah ditemukan
+T_KC1_35,Tempat sampah tidak penuh
+T_KC2_2,Kantor cabangnya banyak (dekat dengan tempat tinggal dan atau tempat kerja saya) - XYZ
+T_KC2_5,Menyediakan layanan weekend banking - XYZ
+T_KC2_8,"Penampilan luar bangunan cabang dan papan nama cabang dalam keadaan bersih, jelas dan terawat - XYZ"
+T_KC2_11,Tersedia area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir) - XYZ
+T_KC2_14,Ada petugas Sekuriti yang mengatur di area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir) - XYZ
+T_KC2_17,"Petunjuk arah parkir untuk nasabah  yang jelas dan bersih (petunjuk arah, tanda-tanda seperti area parkir mobil, area parkir motor) - XYZ"
+T_KC2_20,Kebersihan di area parkir - XYZ
+T_KC2_23,Kebersihan pada area masuk cabang - XYZ
+T_KC2_26,"Kebersihan dan kenyamanan area Banking Hall (kursi ruang tunggu, AC, TV, Pencahayaan, harum, dll) - XYZ"
+T_KC2_29,Tersedia tempat duduk yang cukup di ruang tunggu - XYZ
+T_KC2_32,Pendingin ruangan di ruang tunggu sejuk  - XYZ
+T_KC2_35,Ruang tunggu nyaman - XYZ
+T_KC2_38,Disediakan Wifi gratis di ruang tunggu - XYZ
+T_KC2_41,Tersedia TV di ruang tunggu - XYZ
+T_KC2_44,Area ruang tunggunya wangi - XYZ
+T_KC2_47,Diputarkan lagu lembut yang mengalun di area banking hall - XYZ
+T_KC2_50,Banking hall/area ruang tunggunya bersih - XYZ
+T_KC2_53,Terdapat tempat sampah dan mudah ditemukan - XYZ
+T_KC2_56,"Tersedia penunjuk arah ruang pelayanan nasabah yang jelas/mudah terlihat (CS, Teller, Toilet, dan bisnis unit lainnya) - XYZ"
+T_KC2_59,"Area ruang Tertata dengan baik, rapi dan teratur - XYZ"
+T_KC2_62,Tata letak di kantor cabang mudah untuk diikuti dan mudah untuk menemukan sesuatu yang dibutuhkan - XYZ
+T_KC2_65,Terdapat tanaman hidup - XYZ
+T_KC2_68,Tersedianya ruang laktasi  - XYZ
+T_KC2_71,Kemudahan mengisi data-data pembukaan rekening baru pada e-form (formulir elektronik) - XYZ
+T_KC2_74,Terdapat petunjuk arah ke toilet - XYZ
+T_KC2_77,Terdapat toilet di cabang - XYZ
+T_KC2_80,Toilet bersih - XYZ
+T_KC2_83,Toilet selalu harum dan tidak bau - XYZ
+T_KC2_86,Tersedia wastafel di area toilet - XYZ
+T_KC2_89,Selalu tersedia tisu di toilet - XYZ
+T_KC2_92,Selalu tersedia sabun pencuci tangan di toilet - XYZ
+T_KC2_95,Air selalu mengalir dengan lancar di semua keran yang ada di toilet - XYZ
+T_KC2_98,Toilet selalu berfungsi dengan baik - XYZ
+T_KC2_101,Terdapat tempat sampah di toilet dan mudah ditemukan - XYZ
+T_KC2_104,Tempat sampah tidak penuh - XYZ
+T_KC2_107,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap JUMLAH & WAKTU OPERASIONAL bank - XYZ"
+T_KC2_110,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap RUANG PARKIR bank .. untuk cabang yang ada di gedung sendiri/ruko - XYZ"
+T_KC2_113,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap BANKING HALL bank.. - XYZ"
+T_KC2_116,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap TOILET bank.. - XYZ"
+T_KC2_3,Kantor cabangnya banyak (dekat dengan tempat tinggal dan atau tempat kerja saya) - kompetitor
+T_KC2_6,Menyediakan layanan weekend banking - kompetitor
+T_KC2_9,"Penampilan luar bangunan cabang dan papan nama cabang dalam keadaan bersih, jelas dan terawat - kompetitor"
+T_KC2_12,Tersedia area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir) - kompetitor
+T_KC2_15,Ada petugas Sekuriti yang mengatur di area parkir (khusus untuk cabang di gedung sendiri/ruko dan cabang yang menghadap ke tempat parkir) - kompetitor
+T_KC2_18,"Petunjuk arah parkir untuk nasabah  yang jelas dan bersih (petunjuk arah, tanda-tanda seperti area parkir mobil, area parkir motor) - kompetitor"
+T_KC2_21,Kebersihan di area parkir - kompetitor
+T_KC2_24,Kebersihan pada area masuk cabang - kompetitor
+T_KC2_27,"Kebersihan dan kenyamanan area Banking Hall (kursi ruang tunggu, AC, TV, Pencahayaan, harum, dll) - kompetitor"
+T_KC2_30,Tersedia tempat duduk yang cukup di ruang tunggu - kompetitor
+T_KC2_33,Pendingin ruangan di ruang tunggu sejuk  - kompetitor
+T_KC2_36,Ruang tunggu nyaman - kompetitor
+T_KC2_39,Disediakan Wifi gratis di ruang tunggu - kompetitor
+T_KC2_42,Tersedia TV di ruang tunggu - kompetitor
+T_KC2_45,Area ruang tunggunya wangi - kompetitor
+T_KC2_48,Diputarkan lagu lembut yang mengalun di area banking hall - kompetitor
+T_KC2_51,Banking hall/area ruang tunggunya bersih - kompetitor
+T_KC2_54,Terdapat tempat sampah dan mudah ditemukan - kompetitor
+T_KC2_57,"Tersedia penunjuk arah ruang pelayanan nasabah yang jelas/mudah terlihat (CS, Teller, Toilet, dan bisnis unit lainnya) - kompetitor"
+T_KC2_60,"Area ruang Tertata dengan baik, rapi dan teratur - kompetitor"
+T_KC2_63,Tata letak di kantor cabang mudah untuk diikuti dan mudah untuk menemukan sesuatu yang dibutuhkan - kompetitor
+T_KC2_66,Terdapat tanaman hidup - kompetitor
+T_KC2_69,Tersedianya ruang laktasi  - kompetitor
+T_KC2_72,Kemudahan mengisi data-data pembukaan rekening baru pada e-form (formulir elektronik) - kompetitor
+T_KC2_75,Terdapat petunjuk arah ke toilet - kompetitor
+T_KC2_78,Terdapat toilet di cabang - kompetitor
+T_KC2_81,Toilet bersih - kompetitor
+T_KC2_84,Toilet selalu harum dan tidak bau - kompetitor
+T_KC2_87,Tersedia wastafel di area toilet - kompetitor
+T_KC2_90,Selalu tersedia tisu di toilet - kompetitor
+T_KC2_93,Selalu tersedia sabun pencuci tangan di toilet - kompetitor
+T_KC2_96,Air selalu mengalir dengan lancar di semua keran yang ada di toilet - kompetitor
+T_KC2_99,Toilet selalu berfungsi dengan baik - kompetitor
+T_KC2_102,Terdapat tempat sampah di toilet dan mudah ditemukan - kompetitor
+T_KC2_105,Tempat sampah tidak penuh - kompetitor
+T_KC2_108,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap JUMLAH & WAKTU OPERASIONAL bank - kompetitor"
+T_KC2_111,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap RUANG PARKIR bank .. untuk cabang yang ada di gedung sendiri/ruko - kompetitor"
+T_KC2_114,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap BANKING HALL bank.. - kompetitor"
+T_KC2_117,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap TOILET bank.. - kompetitor"
+T_SC1_1,"Penampilannya sesuai dengan standar (tinggi, tegap, besar dan tidak gemuk)"
+T_SC1_2,Penampilannya rapi
+T_SC1_3,Menggunakan seragam sekuriti yang lengkap
+T_SC1_4,Menyambut nasabah dengan ramah
+T_SC1_5,Berperilaku sopan
+T_SC1_6,Mengucapkan salam saat nasabah datang/pulang
+T_SC1_7,Menawarkan bantuan saat nasabah datang
+T_SC1_8,Mengarahkan nasabah dan mengkonfirmasi kelengkapan dokumen yang diperlukan untuk bertransaksi
+T_SC1_9,Memiliki pengetahuan yang memadai untuk menjawab pertanyaan dari nasabah
+T_SC1_10,Memberikan nomor antrian kepada nasabah
+T_SC1_11,Mengatur antrian nasabah
+T_SC1_12,Mengucapkan terima kasih saat nasabah pulang
+T_SC1_13,Jumlah sekuriti memadai
+T_SC1_14,Keberadaan Satpam Luar Banking Hall yang siap dan siaga (N/A untuk KCP)
+T_SC1_15,Keberadaan Satpam Dalam Banking Hall yang siap dan siaga
+T_SC2_2,"Penampilannya sesuai dengan standar (tinggi, tegap, besar dan tidak gemuk) - XYZ"
+T_SC2_5,Penampilannya rapi - XYZ
+T_SC2_8,Menggunakan seragam sekuriti yang lengkap - XYZ
+T_SC2_11,Menyambut nasabah dengan ramah - XYZ
+T_SC2_14,Berperilaku sopan - XYZ
+T_SC2_17,Mengucapkan salam saat nasabah datang/pulang - XYZ
+T_SC2_20,Menawarkan bantuan saat nasabah datang - XYZ
+T_SC2_23,Mengarahkan nasabah dan mengkonfirmasi kelengkapan dokumen yang diperlukan untuk bertransaksi - XYZ
+T_SC2_26,Memiliki pengetahuan yang memadai untuk menjawab pertanyaan dari nasabah - XYZ
+T_SC2_29,Memberikan nomor antrian kepada nasabah - XYZ
+T_SC2_32,Mengatur antrian nasabah - XYZ
+T_SC2_35,Mengucapkan terima kasih saat nasabah pulang - XYZ
+T_SC2_38,Jumlah sekuriti memadai - XYZ
+T_SC2_41,Keberadaan Satpam Luar Banking Hall yang siap dan siaga (N/A untuk KCP) - XYZ
+T_SC2_44,Keberadaan Satpam Dalam Banking Hall yang siap dan siaga - XYZ
+T_SC2_47,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap SEKURITI Bank? - XYZ"
+T_SC2_3,"Penampilannya sesuai dengan standar (tinggi, tegap, besar dan tidak gemuk) - kompetitor"
+T_SC2_6,Penampilannya rapi - kompetitor
+T_SC2_9,Menggunakan seragam sekuriti yang lengkap - kompetitor
+T_SC2_12,Menyambut nasabah dengan ramah - kompetitor
+T_SC2_15,Berperilaku sopan - kompetitor
+T_SC2_18,Mengucapkan salam saat nasabah datang/pulang - kompetitor
+T_SC2_21,Menawarkan bantuan saat nasabah datang - kompetitor
+T_SC2_24,Mengarahkan nasabah dan mengkonfirmasi kelengkapan dokumen yang diperlukan untuk bertransaksi - kompetitor
+T_SC2_27,Memiliki pengetahuan yang memadai untuk menjawab pertanyaan dari nasabah - kompetitor
+T_SC2_30,Memberikan nomor antrian kepada nasabah - kompetitor
+T_SC2_33,Mengatur antrian nasabah - kompetitor
+T_SC2_36,Mengucapkan terima kasih saat nasabah pulang - kompetitor
+T_SC2_39,Jumlah sekuriti memadai - kompetitor
+T_SC2_42,Keberadaan Satpam Luar Banking Hall yang siap dan siaga (N/A untuk KCP) - kompetitor
+T_SC2_45,Keberadaan Satpam Dalam Banking Hall yang siap dan siaga - kompetitor
+T_SC2_48,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap SEKURITI Bank? - kompetitor"
+TL1,"Menurut anda, kapankah saat PALING diperlukan untuk memperbanyak jumlah teller sehingga mengurangi jumlah antrian di bank?"
+T_TL2_1,Waktu antrian di Teller cepat
+T_TL2_2,Sistem antrian yang dilengkapi dengan nomor antrian
+T_TL2_3,Layanan yang diberikan teller cepat
+T_TL2_4,Jumlah teller di kantor cabang mencukupi pada saat jam sibuk (meja teller tidak ada yang kosong)
+T_TL2_5,Tellernya berpenampilan rapi dan menarik
+T_TL2_6,Akurat dalam melakukan transaksi (Tidak salah dalam melakukan transaksi)
+T_TL2_7,Kehandalan sistem komputer untuk Teller (online)
+T_TL2_8,Teller memiliki pengetahuan yang memadai
+T_TL2_9,"Teller memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll)"
+T_TL2_10,Tellernya ramah selama melayani (tersenyum dan tidak jutek selama melayani)
+T_TL2_11,Tellernya mengucapkan salam saat menyambut dan mengakhiri layanan
+T_TL2_12,Tellernya tidak mengobrol dengan rekannya / petugas bank lain
+T_TL2_13,Menunjukkan keinginan untuk membantu nasabah (selalu menanyakan apalagi yang bisa dibantu)
+T_TL2_14,Teller memperkenalkan diri/menyebut namanya saat menyambut nasabah
+T_TL2_15,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah)
+T_TL2_16,Tellernya selalu melakukan validas setelah selesai transaksi di Teller
+T_TL2_17,Memberikan usaha lebih/extra effort untuk nasabahnya (membantu mengecek pengisian slip setoran/penarikan/pembayaran/verifikasi/konfirmasi data nasabah)
+T_TL2_18,Terdapat papan nama Teller di area meja kerja Teller
+T_TL2_19,Terdapat informasi/signage transaksi di meja kerja teller
+T_TL3_2,Waktu antrian di Teller cepat - XYZ
+T_TL3_5,Sistem antrian yang dilengkapi dengan nomor antrian - XYZ
+T_TL3_8,Layanan yang diberikan teller cepat      - XYZ
+T_TL3_11,Jumlah teller di kantor cabang mencukupi pada saat jam sibuk (meja teller tidak ada yang kosong) - XYZ
+T_TL3_14,Tellernya berpenampilan rapi dan menarik - XYZ
+T_TL3_17,Akurat dalam melakukan transaksi (Tidak salah dalam melakukan transaksi) - XYZ
+T_TL3_20,Kehandalan sistem komputer untuk Teller (online) - XYZ
+T_TL3_23,Teller memiliki pengetahuan yang memadai - XYZ
+T_TL3_26,"Teller memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll) - XYZ"
+T_TL3_29,Tellernya ramah selama melayani (tersenyum dan tidak jutek selama melayani) - XYZ
+T_TL3_32,Tellernya mengucapkan salam saat menyambut dan mengakhiri layanan - XYZ
+T_TL3_35,Tellernya tidak mengobrol dengan rekannya / petugas bank lain - XYZ
+T_TL3_38,Menunjukkan keinginan untuk membantu nasabah (selalu menanyakan apalagi yang bisa dibantu) - XYZ
+T_TL3_41,Teller memperkenalkan diri/menyebut namanya saat menyambut nasabah - XYZ
+T_TL3_44,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah) - XYZ
+T_TL3_47,Tellernya selalu melakukan validas setelah selesai transaksi di Teller - XYZ
+T_TL3_50,Memberikan usaha lebih/extra effort untuk nasabahnya (membantu mengecek pengisian slip setoran/penarikan/pembayaran/verifikasi/konfirmasi data nasabah) - XYZ
+T_TL3_53,Terdapat papan nama Teller di area meja kerja Teller - XYZ
+T_TL3_56,Terdapat informasi/signage transaksi di meja kerja teller - XYZ
+T_TL3_59,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap TELLER bank? - XYZ"
+T_TL3_3,Waktu antrian di Teller cepat - kompetitor
+T_TL3_6,Sistem antrian yang dilengkapi dengan nomor antrian - kompetitor
+T_TL3_9,Layanan yang diberikan teller cepat      - kompetitor
+T_TL3_12,Jumlah teller di kantor cabang mencukupi pada saat jam sibuk (meja teller tidak ada yang kosong) - kompetitor
+T_TL3_15,Tellernya berpenampilan rapi dan menarik - kompetitor
+T_TL3_18,Akurat dalam melakukan transaksi (Tidak salah dalam melakukan transaksi) - kompetitor
+T_TL3_21,Kehandalan sistem komputer untuk Teller (online) - kompetitor
+T_TL3_24,Teller memiliki pengetahuan yang memadai - kompetitor
+T_TL3_27,"Teller memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll) - kompetitor"
+T_TL3_30,Tellernya ramah selama melayani (tersenyum dan tidak jutek selama melayani) - kompetitor
+T_TL3_33,Tellernya mengucapkan salam saat menyambut dan mengakhiri layanan - kompetitor
+T_TL3_36,Tellernya tidak mengobrol dengan rekannya / petugas bank lain - kompetitor
+T_TL3_39,Menunjukkan keinginan untuk membantu nasabah (selalu menanyakan apalagi yang bisa dibantu) - kompetitor
+T_TL3_42,Teller memperkenalkan diri/menyebut namanya saat menyambut nasabah - kompetitor
+T_TL3_45,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah) - kompetitor
+T_TL3_48,Tellernya selalu melakukan validas setelah selesai transaksi di Teller - kompetitor
+T_TL3_51,Memberikan usaha lebih/extra effort untuk nasabahnya (membantu mengecek pengisian slip setoran/penarikan/pembayaran/verifikasi/konfirmasi data nasabah) - kompetitor
+T_TL3_54,Terdapat papan nama Teller di area meja kerja Teller - kompetitor
+T_TL3_57,Terdapat informasi/signage transaksi di meja kerja teller - kompetitor
+T_TL3_60,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap TELLER bank? - kompetitor"
+TL5,Berapa lama waktu tunggu/antri Teller Anda untuk kunjungan hari ini? ___ menit
+TL6,Berapa lamakah waktu tunggu/antri Teller yang Anda bisa terima/toleransi? ___ menit
+CS1,"Menurut anda, pada saat kapan yang PALING diperlukan untuk menambah jumlah Customer Service sehingga mengurangi jumlah antrian di bank?"
+T_CS2_1,CS ramah selama melayani (tersenyum dan tidak jutek selama melayani)
+T_CS2_2,Jumlah Customer Service yang melayani cukup pada saat jam sibuk (meja CS tidak ada yang kosong)
+T_CS2_3,Mengetahui pengetahuan yang baik tentang produk perbankan
+T_CS2_4,Memberikan solusi yang tepat terhadap permasalahan nasabah
+T_CS2_5,Cepat dalam memberikan layanan
+T_CS2_6,Teliti dalam memberikan layanan
+T_CS2_7,Waktu antrian di CS cepat
+T_CS2_8,CS memiliki kehandalan sistem komputer di meja CS (online)
+T_CS2_9,CS memiliki pengetahuan dalam menjawab pertanyaan nasabah atau pengetahuan CS ketika menjelaskan produk kepada nasabah
+T_CS2_10,CS memiliki pemahaman terhadap permintaan/permasalahan nasabah
+T_CS2_11,"CS memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll)"
+T_CS2_12,CS menjelaskan proses pembukaan rekening baru dengan e-form (formulir elektronik) dengan baik
+T_CS2_13,Memberikan informasi yang lengkap dan akurat
+T_CS2_14,Tidak mengobrol dengan rekan kerja
+T_CS2_15,CS berpenampilan rapi dan menarik
+T_CS2_16,Menunjukkan keinginan untuk membantu nasabah
+T_CS2_17,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah).1
+T_CS2_18,CSnya mengucapkan salam saat menyambut dan mengakhiri layanan
+T_CS2_19,CSnya mengucapkan terima kasih saat mengakhiri layanan
+T_CS2_20,"Menginformasikan produk, promo, dan kebijakan terbaru kepada nasabah dengan cara yang baik (disesuaikan dengan ketersediaan waktu nasabah)"
+T_CS2_21,CSnya menawarkan bantuan lain ketika akan mengakhiri layanan
+T_CS2_22,Terdapat papan nama CS di area meja kerja CS
+T_CS2_23,Terdapat informasi/signage terkait status transaksi CS
+T_CS3_2,CS ramah selama melayani (tersenyum dan tidak jutek selama melayani) - XYZ
+T_CS3_5,Jumlah Customer Service yang melayani cukup pada saat jam sibuk (meja CS tidak ada yang kosong) - XYZ
+T_CS3_8,Mengetahui pengetahuan yang baik tentang produk perbankan  - XYZ
+T_CS3_11,Memberikan solusi yang tepat terhadap permasalahan nasabah  - XYZ
+T_CS3_14,Cepat dalam memberikan layanan - XYZ
+T_CS3_17,Teliti dalam memberikan layanan - XYZ
+T_CS3_20,Waktu antrian di CS cepat - XYZ
+T_CS3_23,CS memiliki kehandalan sistem komputer di meja CS (online) - XYZ
+T_CS3_26,CS memiliki pengetahuan dalam menjawab pertanyaan nasabah atau pengetahuan CS ketika menjelaskan produk kepada nasabah - XYZ
+T_CS3_29,CS memiliki pemahaman terhadap permintaan/permasalahan nasabah - XYZ
+T_CS3_32,"CS memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll) - XYZ"
+T_CS3_35,CS menjelaskan proses pembukaan rekening baru dengan e-form (formulir elektronik) dengan baik - XYZ
+T_CS3_38,Memberikan informasi yang lengkap dan akurat - XYZ
+T_CS3_41,Tidak mengobrol dengan rekan kerja  - XYZ
+T_CS3_44,CS berpenampilan rapi dan menarik  - XYZ
+T_CS3_47,Menunjukkan keinginan untuk membantu nasabah - XYZ
+T_CS3_50,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah) - XYZ.1
+T_CS3_53,CSnya mengucapkan salam saat menyambut dan mengakhiri layanan - XYZ
+T_CS3_56,CSnya mengucapkan terima kasih saat mengakhiri layanan - XYZ
+T_CS3_59,"Menginformasikan produk, promo, dan kebijakan terbaru kepada nasabah dengan cara yang baik (disesuaikan dengan ketersediaan waktu nasabah) - XYZ"
+T_CS3_62,CSnya menawarkan bantuan lain ketika akan mengakhiri layanan - XYZ
+T_CS3_65,Terdapat papan nama CS di area meja kerja CS - XYZ
+T_CS3_68,Terdapat informasi/signage terkait status transaksi CS - XYZ
+T_CS3_71,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap CUSTOMER SERVICE bank.. - XYZ"
+T_CS3_3,CS ramah selama melayani (tersenyum dan tidak jutek selama melayani) - kompetitor
+T_CS3_6,Jumlah Customer Service yang melayani cukup pada saat jam sibuk (meja CS tidak ada yang kosong) - kompetitor
+T_CS3_9,Mengetahui pengetahuan yang baik tentang produk perbankan  - kompetitor
+T_CS3_12,Memberikan solusi yang tepat terhadap permasalahan nasabah  - kompetitor
+T_CS3_15,Cepat dalam memberikan layanan - kompetitor
+T_CS3_18,Teliti dalam memberikan layanan - kompetitor
+T_CS3_21,Waktu antrian di CS cepat - kompetitor
+T_CS3_24,CS memiliki kehandalan sistem komputer di meja CS (online) - kompetitor
+T_CS3_27,CS memiliki pengetahuan dalam menjawab pertanyaan nasabah atau pengetahuan CS ketika menjelaskan produk kepada nasabah - kompetitor
+T_CS3_30,CS memiliki pemahaman terhadap permintaan/permasalahan nasabah - kompetitor
+T_CS3_33,"CS memberikan edukasi tentang penggunaan e-channel (ATM, Mobile Banking, dll) - kompetitor"
+T_CS3_36,CS menjelaskan proses pembukaan rekening baru dengan e-form (formulir elektronik) dengan baik - kompetitor
+T_CS3_39,Memberikan informasi yang lengkap dan akurat - kompetitor
+T_CS3_42,Tidak mengobrol dengan rekan kerja  - kompetitor
+T_CS3_45,CS berpenampilan rapi dan menarik  - kompetitor
+T_CS3_48,Menunjukkan keinginan untuk membantu nasabah - kompetitor
+T_CS3_51,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah) - kompetitor.1
+T_CS3_54,CSnya mengucapkan salam saat menyambut dan mengakhiri layanan - kompetitor
+T_CS3_57,CSnya mengucapkan terima kasih saat mengakhiri layanan - kompetitor
+T_CS3_60,"Menginformasikan produk, promo, dan kebijakan terbaru kepada nasabah dengan cara yang baik (disesuaikan dengan ketersediaan waktu nasabah) - kompetitor"
+T_CS3_63,CSnya menawarkan bantuan lain ketika akan mengakhiri layanan - kompetitor
+T_CS3_66,Terdapat papan nama CS di area meja kerja CS - kompetitor
+T_CS3_69,Terdapat informasi/signage terkait status transaksi CS - kompetitor
+T_CS3_72,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap CUSTOMER SERVICE bank.. - kompetitor"
+CS5,Berapa lama waktu tunggu/antri CS Anda untuk kunjungan hari ini? ___ menit
+CS6,Berapa lamakah waktu tunggu/antri CS yang Anda bisa terima/toleransi? ___ menit
+T_CA1_1,CA ramah selama melayani (tersenyum dan tidak jutek selama melayani)
+T_CA1_2,CA selalu standby ketika dibutuhkan
+T_CA1_3,Mengetahui pengetahuan yang baik tentang produk perbankan.1
+T_CA1_4,Cepat dalam memberikan layanan.1
+T_CA1_5,Teliti dalam memberikan layanan.1
+T_CA1_6,Waktu  layanan oleh CA cepat
+T_CA1_7,Dapat menangani berbagai macam masalah sesuai kebutuhan
+T_CA1_8,CA memiliki keandalan sistem komputer/Laptop yang di gunakan (online)
+T_CA1_9,CA memiliki pengetahuan dalam menjawab pertanyaan nasabah atau pengetahuan CA ketika menjelaskan produk kepada nasabah
+T_CA1_10,CA memiliki pemahaman terhadap permintaan/permasalahan nasabah
+T_CA1_11,Memberikan informasi yang lengkap dan akurat.1
+T_CA1_12,Tidak mengobrol dengan rekan kerja.1
+T_CA1_13,CA berpenampilan rapi dan menarik
+T_CA1_14,Menunjukkan keinginan untuk membantu nasabah.1
+T_CA1_15,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah).2
+T_CA1_16,CA mengucapkan salam saat menyambut dan mengakhiri layanan
+T_CA1_17,CA mengucapkan terima kasih saat mengakhiri layanan
+T_CA1_18,"Menginformasikan produk, promo, dan kebijakan terbaru kepada nasabah dengan cara yang baik (disesuaikan dengan ketersediaan waktu nasabah).1"
+T_CA1_19,CA menawarkan bantuan lain ketika akan mengakhiri layanan
+T_CA2_1,CA ramah selama melayani (tersenyum dan tidak jutek selama melayani).1
+T_CA2_2,CA selalu standby ketika dibutuhkan.1
+T_CA2_3,Mengetahui pengetahuan yang baik tentang produk perbankan.2
+T_CA2_4,Cepat dalam memberikan layanan.2
+T_CA2_5,Teliti dalam memberikan layanan.2
+T_CA2_6,Waktu  layanan oleh CA cepat.1
+T_CA2_7,Dapat menangani berbagai macam masalah sesuai kebutuhan.1
+T_CA2_8,CA memiliki keandalan sistem komputer/Laptop yang di gunakan (online).1
+T_CA2_9,CA memiliki pengetahuan dalam menjawab pertanyaan nasabah atau pengetahuan CA ketika menjelaskan produk kepada nasabah.1
+T_CA2_10,CA memiliki pemahaman terhadap permintaan/permasalahan nasabah.1
+T_CA2_11,Memberikan informasi yang lengkap dan akurat.2
+T_CA2_12,Tidak mengobrol dengan rekan kerja.2
+T_CA2_13,CA berpenampilan rapi dan menarik.1
+T_CA2_14,Menunjukkan keinginan untuk membantu nasabah.2
+T_CA2_15,Memberikan pelayanan dengan pendekatan personal (menyebut nama nasabah).3
+T_CA2_16,CA mengucapkan salam saat menyambut dan mengakhiri layanan.1
+T_CA2_17,CA mengucapkan terima kasih saat mengakhiri layanan.1
+T_CA2_18,"Menginformasikan produk, promo, dan kebijakan terbaru kepada nasabah dengan cara yang baik (disesuaikan dengan ketersediaan waktu nasabah).2"
+T_CA2_19,CA menawarkan bantuan lain ketika akan mengakhiri layanan.1
+T_CA2_20,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap CUSTOMER ADVISOR bank"
+T_SL1_1,Terdapat Smart Tab pada kantor cabang
+T_SL1_2,CA menggunakan Smart Tab ketika menjelaskan kepada nasabah
+T_SL1_3,Terdapat XYZ Santer pada kantor cabang
+T_SL1_4,XYZ Santer dapat berfungsi dengan baik
+T_SL1_5,Terdapat Digital Signage pada kantor cabang
+T_SL1_6,Digital Signage dapat berfungsi dengan baik
+T_SL1_7,Terdapat Smart Table pada kantor cabang
+T_SL1_8,Smart Table dapat berfungsi dengan baik
+T_SL1_9,Terdapat Pinpad pada area kerja CS
+T_SL1_10,Pinpad dapat berfungsi dengan baik
+T_SL1_11,Terdapat Pinpad pada area kerja Teller
+T_SL1_12,Pinpad dapat berfungsi dengan baik.1
+T_SL1_13,"Terdapat mesin CRM pada kantor cabang (CRM adalah mesin ATM yang memiliki fungsi ATM Tarikan Tunai, ATM Non Tunai, dan ATM Setoran Tunai)"
+T_SL1_14,Mesin CRM dapat berfungsi dengan baik
+T_SL1_15,Terdapat mesin TCR pada kantor cabang (TCR adalah mesin setor tunai di mana nasabah dapat melakukan setoran tunai secara mandiri di area toonbank teller)
+T_SL1_16,Mesin TCR dapat berfungsi dengan baik
+T_SL2_1,Terdapat Smart Tab pada kantor cabang.1
+T_SL2_2,CA menggunakan Smart Tab ketika menjelaskan kepada nasabah.1
+T_SL2_3,Terdapat XYZ Santer pada kantor cabang.1
+T_SL2_4,XYZ Santer dapat berfungsi dengan baik.1
+T_SL2_5,Terdapat Digital Signage pada kantor cabang.1
+T_SL2_6,Digital Signage dapat berfungsi dengan baik.1
+T_SL2_7,Terdapat Smart Table pada kantor cabang.1
+T_SL2_8,Smart Table dapat berfungsi dengan baik.1
+T_SL2_9,Terdapat Pinpad pada area kerja CS.1
+T_SL2_10,Pinpad dapat berfungsi dengan baik.2
+T_SL2_11,Terdapat Pinpad pada area kerja Teller.1
+T_SL2_12,Pinpad dapat berfungsi dengan baik.3
+T_SL2_13,"Terdapat mesin CRM pada kantor cabang (CRM adalah mesin ATM yang memiliki fungsi ATM Tarikan Tunai, ATM Non Tunai, dan ATM Setoran Tunai).1"
+T_SL2_14,Mesin CRM dapat berfungsi dengan baik.1
+T_SL2_15,Terdapat mesin TCR pada kantor cabang (TCR adalah mesin setor tunai di mana nasabah dapat melakukan setoran tunai secara mandiri di area toonbank teller).1
+T_SL2_16,Mesin TCR dapat berfungsi dengan baik.1
+T_SL2_17,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap SARANA ELEKTRONIK LAYANAN bank"
+AT1,Apakah Anda pernah menggunakan ATM Bank XYZ dan ATM {0}?
+T_AT2_1,Mesin ATMnya mudah ditemui dimana-mana
+T_AT2_2,"Ketersediaan berbagai jenis ATM (tunai, setor tunai, non tunai)"
+T_AT2_3,"Fitur-fitur yang ada di mesin ATM lengkap: pembayaran berbagai macam tagihan, transfer antar bank dan pembelian"
+T_AT2_4,Antrian di mesin ATM tidak panjang
+T_AT2_5,Saya merasa aman ketika bertransaksi menggunakan ATM karena dilengkapi dengan CCTV/ada sekuriti
+T_AT2_6,"Mesin ATM dapat berfungsi dengan baik ketika akan digunakan (tidak sering error, offline,struk selalu tersedia)"
+T_AT2_7,Mesin ATMnya berada di lokasi yang aman (bukan di tempat yang sepi)
+T_AT2_8,"Ruangan mesin ATMnya nyaman (sejuk, bersih, wangi)"
+T_AT2_9,Menyediakan ATM dengan berbagai pilihan pecahan nominal (Rp 50.000/Rp 100.000)
+T_AT2_10,Kartu ATMnya dapat digunakan untuk bertransaksi dan berbelanja
+T_AT2_11,Selalu meminta PIN setiap kali berganti transaksi untuk menjamin keamanan
+T_AT2_12,Kartu ATMnya bisa digunakan di ATM BERSAMA dan jaringan ATM lainnya
+T_AT2_13,Memiliki alarm yang mengingatkan jika kartu ATM belum diambil dari mesin ATM
+T_AT2_14,Disediakan nomor call center di mesin ATM yang bisa dihubungi
+T_AT2_15,Tersedia tempat sampah di bilik ATM
+T_AT2_16,Terdapat tutup pengaman di atas tombol/keypad untuk menjaga kerahasiaan nasabah saat memasukkan PIN
+T_AT2_17,Tersedia informasi untuk lokasi ATM terdekat
+T_AT2_18,Memiliki persediaan uang yang cukup
+T_AT3_2,Mesin ATMnya mudah ditemui dimana-mana - XYZ
+T_AT3_5,"Ketersediaan berbagai jenis ATM (tunai, setor tunai, non tunai)  - XYZ"
+T_AT3_8,"Fitur-fitur yang ada di mesin ATM lengkap: pembayaran berbagai macam tagihan, transfer antar bank dan pembelian - XYZ"
+T_AT3_11,Antrian di mesin ATM tidak panjang - XYZ
+T_AT3_14,Saya merasa aman ketika bertransaksi menggunakan ATM karena dilengkapi dengan CCTV/ada sekuriti - XYZ
+T_AT3_17,"Mesin ATM dapat berfungsi dengan baik ketika akan digunakan (tidak sering error, offline,struk selalu tersedia) - XYZ"
+T_AT3_20,Mesin ATMnya berada di lokasi yang aman (bukan di tempat yang sepi) - XYZ
+T_AT3_23,"Ruangan mesin ATMnya nyaman (sejuk, bersih, wangi) - XYZ"
+T_AT3_26,Menyediakan ATM dengan berbagai pilihan pecahan nominal (Rp 50.000/Rp 100.000) - XYZ
+T_AT3_29,Kartu ATMnya dapat digunakan untuk bertransaksi dan berbelanja - XYZ
+T_AT3_32,Selalu meminta PIN setiap kali berganti transaksi untuk menjamin keamanan - XYZ
+T_AT3_35,Kartu ATMnya bisa digunakan di ATM BERSAMA dan jaringan ATM lainnya - XYZ
+T_AT3_38,Memiliki alarm yang mengingatkan jika kartu ATM belum diambil dari mesin ATM - XYZ
+T_AT3_41,Disediakan nomor call center di mesin ATM yang bisa dihubungi - XYZ
+T_AT3_44,Tersedia tempat sampah di bilik ATM - XYZ
+T_AT3_47,Terdapat tutup pengaman di atas tombol/keypad untuk menjaga kerahasiaan nasabah saat memasukkan PIN - XYZ
+T_AT3_50,Tersedia informasi untuk lokasi ATM terdekat - XYZ
+T_AT3_53,Memiliki persediaan uang yang cukup - XYZ
+T_AT3_56,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap fasilitas ATM bank. - XYZ"
+T_AT3_3,Mesin ATMnya mudah ditemui dimana-mana - kompetitor
+T_AT3_6,"Ketersediaan berbagai jenis ATM (tunai, setor tunai, non tunai)  - kompetitor"
+T_AT3_9,"Fitur-fitur yang ada di mesin ATM lengkap: pembayaran berbagai macam tagihan, transfer antar bank dan pembelian - kompetitor"
+T_AT3_12,Antrian di mesin ATM tidak panjang - kompetitor
+T_AT3_15,Saya merasa aman ketika bertransaksi menggunakan ATM karena dilengkapi dengan CCTV/ada sekuriti - kompetitor
+T_AT3_18,"Mesin ATM dapat berfungsi dengan baik ketika akan digunakan (tidak sering error, offline,struk selalu tersedia) - kompetitor"
+T_AT3_21,Mesin ATMnya berada di lokasi yang aman (bukan di tempat yang sepi) - kompetitor
+T_AT3_24,"Ruangan mesin ATMnya nyaman (sejuk, bersih, wangi) - kompetitor"
+T_AT3_27,Menyediakan ATM dengan berbagai pilihan pecahan nominal (Rp 50.000/Rp 100.000) - kompetitor
+T_AT3_30,Kartu ATMnya dapat digunakan untuk bertransaksi dan berbelanja - kompetitor
+T_AT3_33,Selalu meminta PIN setiap kali berganti transaksi untuk menjamin keamanan - kompetitor
+T_AT3_36,Kartu ATMnya bisa digunakan di ATM BERSAMA dan jaringan ATM lainnya - kompetitor
+T_AT3_39,Memiliki alarm yang mengingatkan jika kartu ATM belum diambil dari mesin ATM - kompetitor
+T_AT3_42,Disediakan nomor call center di mesin ATM yang bisa dihubungi - kompetitor
+T_AT3_45,Tersedia tempat sampah di bilik ATM - kompetitor
+T_AT3_48,Terdapat tutup pengaman di atas tombol/keypad untuk menjaga kerahasiaan nasabah saat memasukkan PIN - kompetitor
+T_AT3_51,Tersedia informasi untuk lokasi ATM terdekat - kompetitor
+T_AT3_54,Memiliki persediaan uang yang cukup - kompetitor
+T_AT3_57,"Dengan mempertimbangkan berbagai hal, bagaimana penilaian keseluruhan terhadap fasilitas ATM bank. - kompetitor"
+E1A,Tingkat Kepuasan terhadap XYZ
+E1AA,Mohon sebutkan alasan anda memberikan nilai {0}
+E1B,Tingkat Kepuasan terhadap Bank kompetitor
+E1BB,Mohon sebutkan alasan anda memberikan nilai {0}.1
+F1A,Ke depannya saya pasti akan tetap menggunakan layanan dari Bank XYZ
+F1B,Ke depannya saya pasti akan tetap menggunakan layanan dari bank(kompetitor)
+G1A,NPS Bank XYZ
+G1B,Apakah alasan Anda menjawab skala {0}?
+G1C,NPS bank kompetitor
+G1D,Apakah alasan Anda menjawab skala {0}?.1
+T_H1A_2,"Ke depannya, saya pasti akan tetap menggunakan layanan dari Bank XYZ - XYZ"
+T_H1A_5,Memberikan saya kemudahan untuk bertransaksi dimana pun dan kapan pun - XYZ
+T_H1A_8,Bank yang memudahkan saya untuk bertransaksi karena digunakan oleh banyak orang - XYZ
+T_H1A_11,"Bank yang memberikan banyak keuntungan finansial (bunga lebih tinggi, biaya yang rendah, tanpa biaya administrasi, asuransi gratis) - XYZ"
+T_H1A_14,"Bank yang menawarkan produk untuk semua kebutuhan saya (tabungan regular, tabungan anak, tabungan rencana, tabungan dengan tambahan asuransi, tabungan haji, deposito, dan lain-lain) - XYZ"
+T_H1A_17,Bank yang memberikan promo sesuai dengan gaya hidup saya - XYZ
+T_H1A_20,Memberikan saya kecepatan bertransaksi (real time ke semua bank dan pembayaran) - XYZ
+T_H1A_23,Saya merasa aman menyimpan uang dan bertransaksi di bank ini - XYZ
+T_H1A_26,"Saya merasa nyaman bertransaksi dengan bank ini dengan segala fasilitas yang diberikan (sistem antrian, e-channel, mesin setor tunai) - XYZ"
+T_H1A_29,"Saya merasa dihargai menjadi nasabah bank ini dengan layanan yang ramah, peduli, dan tidak membeda-bedakan - XYZ"
+T_H1A_32,Saya bangga menjadi nasabah bank ini dengan produk/layanan/promo yang berbeda yang tidak saya dapatkan dari bank lain - XYZ
+T_H1A_35,Bank yang membuat saya merasa up to date/keren/modern - XYZ
+T_H1A_38,Bank turun-temurun yang membantu keluarga saya dan mengajarkan saya menabung pertama kali - XYZ
+T_H1A_41,Bank dengan segala produk dan fasilitas yang membuat saya merasa cukup dengan menjadi nasabah satu bank saja - XYZ.1
+T_H1A_44,Bank ini membuat saya merasa prestigius/bergengsi - XYZ
+T_H1A_3,"Ke depannya, saya pasti akan tetap menggunakan layanan dari bank  (kompetitor) - kompetitor"
+T_H1A_6,Memberikan saya kemudahan untuk bertransaksi dimana pun dan kapan pun - kompetitor
+T_H1A_9,Bank yang memudahkan saya untuk bertransaksi karena digunakan oleh banyak orang - kompetitor
+T_H1A_12,"Bank yang memberikan banyak keuntungan finansial (bunga lebih tinggi, biaya yang rendah, tanpa biaya administrasi, asuransi gratis) - kompetitor"
+T_H1A_15,"Bank yang menawarkan produk untuk semua kebutuhan saya (tabungan regular, tabungan anak, tabungan rencana, tabungan dengan tambahan asuransi, tabungan haji, deposito, dan lain-lain) - kompetitor"
+T_H1A_18,Bank yang memberikan promo sesuai dengan gaya hidup saya - kompetitor
+T_H1A_21,Memberikan saya kecepatan bertransaksi (real time ke semua bank dan pembayaran) - kompetitor
+T_H1A_24,Saya merasa aman menyimpan uang dan bertransaksi di bank ini - kompetitor
+T_H1A_27,"Saya merasa nyaman bertransaksi dengan bank ini dengan segala fasilitas yang diberikan (sistem antrian, e-channel, mesin setor tunai) - kompetitor"
+T_H1A_30,"Saya merasa dihargai menjadi nasabah bank ini dengan layanan yang ramah, peduli, dan tidak membeda-bedakan - kompetitor"
+T_H1A_33,Saya bangga menjadi nasabah bank ini dengan produk/layanan/promo yang berbeda yang tidak saya dapatkan dari bank lain - kompetitor
+T_H1A_36,Bank yang membuat saya merasa up to date/keren/modern - kompetitor
+T_H1A_39,Bank turun-temurun yang membantu keluarga saya dan mengajarkan saya menabung pertama kali - kompetitor
+T_H1A_42,Bank dengan segala produk dan fasilitas yang membuat saya merasa cukup dengan menjadi nasabah satu bank saja - kompetitor.1
+T_H1A_45,Bank ini membuat saya merasa prestigius/bergengsi - kompetitor
+T_I1A_2,Saya merasa Bahagia pada saat menggunakan layanan cabang - XYZ
+T_I1A_5,Saya Percaya dengan layanan cabang - XYZ
+T_I1A_8,Saya merasa Dihargai sebagai nasabah oleh cabang - XYZ
+T_I1A_11,Saya merasa Diperhatikan sebagai nasabah oleh cabang - XYZ
+T_I1A_14,Saya merasa Aman pada saat menggunakan layanan cabang - XYZ
+T_I1A_17,Saya merasa Fokus pada saat menggunakan layanan cabang - XYZ
+T_I1A_20,Layanan cabang Memanjakan Saya sebagai nasabah - XYZ
+T_I1A_23,Saya merasa Tertarik dengan layanan cabang - XYZ
+T_I1A_26,Layanan yang diberikan cabang membuat saya merasa Penuh Semangat - XYZ
+T_I1A_29,Saya merasa Tidak Puas dengan layanan yang diberikan cabang - XYZ
+T_I1A_32,Saya merasa Frustasi pada saat menggunakan layanan cabang - XYZ
+T_I1A_35,Saya merasa Kecewa dengan layanan cabang - XYZ
+T_I1A_38,Saya merasa Tertekan dengan layanan yang diberikan cabang - XYZ
+T_I1A_41,Saya merasa Tidak Bahagia dengan layanan yang diberikan cabang - XYZ
+T_I1A_44,Saya merasa Diabaikan pada saat menggunakan layanan cabang - XYZ
+T_I1A_47,Saya merasa Tergesa-gesa pada saat menggunakan layanan cabang - XYZ
+T_I1A_3,Saya merasa Bahagia pada saat menggunakan layanan cabang - kompetitor
+T_I1A_6,Saya Percaya dengan layanan cabang - kompetitor
+T_I1A_9,Saya merasa Dihargai sebagai nasabah oleh cabang - kompetitor
+T_I1A_12,Saya merasa Diperhatikan sebagai nasabah oleh cabang - kompetitor
+T_I1A_15,Saya merasa Aman pada saat menggunakan layanan cabang - kompetitor
+T_I1A_18,Saya merasa Fokus pada saat menggunakan layanan cabang - kompetitor
+T_I1A_21,Layanan cabang Memanjakan Saya sebagai nasabah - kompetitor
+T_I1A_24,Saya merasa Tertarik dengan layanan cabang - kompetitor
+T_I1A_27,Layanan yang diberikan cabang membuat saya merasa Penuh Semangat - kompetitor
+T_I1A_30,Saya merasa Tidak Puas dengan layanan yang diberikan cabang - kompetitor
+T_I1A_33,Saya merasa Frustasi pada saat menggunakan layanan cabang - kompetitor
+T_I1A_36,Saya merasa Kecewa dengan layanan cabang - kompetitor
+T_I1A_39,Saya merasa Tertekan dengan layanan yang diberikan cabang - kompetitor
+T_I1A_42,Saya merasa Tidak Bahagia dengan layanan yang diberikan cabang - kompetitor
+T_I1A_45,Saya merasa Diabaikan pada saat menggunakan layanan cabang - kompetitor
+T_I1A_48,Saya merasa Tergesa-gesa pada saat menggunakan layanan cabang - kompetitor
+T_J1_1,Bank XYZ sudah melakukan proses DIGITALISASI LAYANAN CABANG DENGAN BAIK
+T_J1_2,Keberadaan DIGITAL SIGNAGE di cabang XYZ MEMUDAHKAN saya sebagai nasabah dalam memperoleh informasi produk layanan XYZ
+T_J1_3,Keberadaan SMART TABLE di cabang XYZ MEMUDAHKAN bagi saya sebagai nasabah dalam dalam memperoleh informasi produk layanan XYZ(Note: JAWAB 999 JIKA CABANG TIDAK MEMILIKI SMART TABLE)
+T_J1_4,Keberadaan TABLET SURVEY di cabang XYZ MEMUDAHKAN saya sebagai nasabah untuk memberikan penilaian layanan tim cabang
+T_J1_5,Akses ke cabang XYZ mudah
+T_J1A_1,Apakah alasan Anda menjawab skala _____ (Bacakan jawaban J1)?  (Bank XYZ sudah melakukan proses DIGITALISASI LAYANAN CABANG DENGAN BAIK - Menjawab {0})
+T_J1A_2,Apakah alasan Anda menjawab skala _____ (Bacakan jawaban J1)?  (Keberadaan DIGITAL SIGNAGE di cabang XYZ MEMUDAHKAN saya sebagai nasabah dalam memperoleh informasi produk layanan XYZ - Menjawab {0})
+T_J1A_3,Apakah alasan Anda menjawab skala _____ (Bacakan jawaban J1)?  (Keberadaan SMART TABLE di cabang XYZ MEMUDAHKAN bagi saya sebagai nasabah dalam dalam memperoleh informasi produk layanan XYZ - Menjawab {0})
+T_J1A_4,Apakah alasan Anda menjawab skala _____ (Bacakan jawaban J1)?  (Keberadaan TABLET SURVEY di cabang XYZ MEMUDAHKAN saya sebagai nasabah untuk memberikan penilaian layanan tim cabang - Menjawab {0})
+T_J1A_5,Apakah alasan Anda menjawab skala _____ (Bacakan jawaban J1)?  (Akses ke cabang XYZ mudah - Menjawab {0})
+T_J2_1,Menurut Bapak/Ibu apakah yang perlu diperbaiki dari Bank XYZ sehingga dapat menjadi lebih baik? (Bank XYZ sudah melakukan proses DIGITALISASI LAYANAN CABANG DENGAN BAIK)
+T_J2_2,Menurut Bapak/Ibu apakah yang perlu diperbaiki dari Bank XYZ sehingga dapat menjadi lebih baik? (Keberadaan DIGITAL SIGNAGE di cabang XYZ MEMUDAHKAN saya sebagai nasabah dalam memperoleh informasi produk layanan XYZ)
+T_J2_3,Menurut Bapak/Ibu apakah yang perlu diperbaiki dari Bank XYZ sehingga dapat menjadi lebih baik? (Keberadaan SMART TABLE di cabang XYZ MEMUDAHKAN bagi saya sebagai nasabah dalam dalam memperoleh informasi produk layanan XYZ)
+T_J2_4,Menurut Bapak/Ibu apakah yang perlu diperbaiki dari Bank XYZ sehingga dapat menjadi lebih baik? (Keberadaan TABLET SURVEY di cabang XYZ MEMUDAHKAN saya sebagai nasabah untuk memberikan penilaian layanan tim cabang)
+T_J2_5,Menurut Bapak/Ibu apakah yang perlu diperbaiki dari Bank XYZ sehingga dapat menjadi lebih baik? (Akses ke cabang XYZ mudah)
+P1,Apa status pernikahan Bapak/Ibu saat ini?
+P2,Berapa jumlah anak yg Bapak/Ibu miliki?
+P3,Apakah pendidikan terakhir Bapak/Ibu?
+P4,Apakah pekerjaan Bapak/Ibu saat ini?
+Q_85_S,Others.12
+P5,"Berapakah rata-rata PENGELUARAN RUTIN KELUARGA Bapak/Ibu per bulannya untuk keperluan sehari-hari, tetapi tidak termasuk pengeluaran untuk rekreasi, pakaian, sepatu & pengeluaran non-rutin lain serta juga kredit-kredit seperti: mobil, rumah, elektronik, dll"
+P6,Berapakah rata-rata PENGHASILAN RUMAH TANGGA Bapak/Ibu per bulannya termasuk bonus dan pajakCatatan: Penghasilan Mahasiswa/i adalah uang saku yang didapatkan dari orang tua per bulan; Penghasilan Ibu Rumah Tangga adalah uang yang diberikan suami per bulan.
