@@ -5,8 +5,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 import re
 import json
-import requests
+import os
 from collections import Counter
+
+# Tambahan untuk Gemini AI
+try:
+    import google.generativeai as genai
+    GEMINI_OK = True
+except ImportError:
+    GEMINI_OK = False
 
 try:
     from wordcloud import WordCloud
@@ -153,24 +160,24 @@ def card(title, value, color="white", sub="", delta=None, delta_label="vs Global
             f"{dh}</div>")
 
 def ib(text):
-    st.markdown(f"<div class='insight-box'><p>💡 {text}</p></div>",
-                unsafe_allow_html=True)
+    st.markdown(f"<div class='insight-box'><p>💡 {text}</p></div>", unsafe_allow_html=True)
 
 def sh(text):
     st.markdown(f"<div class='sec-hdr'>{text}</div>", unsafe_allow_html=True)
 
+# Update elo() agar grafik lebih lega dan tidak terpotong (margin diperbesar, cliponaxis=False)
 def elo(fig, title="", h=None):
     upd = dict(
-        title=dict(text=title, font=dict(size=13, color='#E2E8F0')),
+        title=dict(text=title, font=dict(size=14, color='#E2E8F0')),
         template="plotly_dark",
         plot_bgcolor=BG, paper_bgcolor=BG,
-        margin=dict(t=46, b=12, l=8, r=8),
-        font=dict(color='#CBD5E1', size=11),
+        margin=dict(t=55, b=30, l=20, r=20), # Margin diperbesar
+        font=dict(color='#CBD5E1', size=12),
         hoverlabel=dict(bgcolor=SURFACE, font_color='#E2E8F0',
                         font_size=12, bordercolor='#3B82F6'),
         legend=dict(font=dict(color='#CBD5E1'), bgcolor='rgba(15,23,42,0.9)',
                     bordercolor='#1E293B', orientation='h',
-                    yanchor='bottom', y=1.02, xanchor='right', x=1),
+                    yanchor='bottom', y=1.05, xanchor='right', x=1),
     )
     if h: upd['height'] = h
     fig.update_layout(**upd)
@@ -178,6 +185,7 @@ def elo(fig, title="", h=None):
                      automargin=True, tickfont=dict(color='#94A3B8'))
     fig.update_yaxes(showgrid=True, gridcolor=GRID, zeroline=False,
                      automargin=True, tickfont=dict(color='#94A3B8'))
+    fig.update_traces(cliponaxis=False) # Mencegah teks terpotong di tepi chart
     return fig
 
 def slbl(col, col_map, n=36):
@@ -384,7 +392,7 @@ def get_dm(dfr):
 
 DM = get_dm(df_raw)
 
-# ── AI helper ─────────────────────────────────────────────────────
+# ── AI helper (Sekarang Menggunakan Gemini) ───────────────────────
 def build_ctx(dff, dhk):
     ns,pp,_,pd2 = calc_nps(dff['G1A_CAT'])
     nk,pk,_,dk  = calc_nps(dhk['G1C_CAT']) if len(dhk)>0 else (0,0,0,0)
@@ -416,23 +424,36 @@ def build_ctx(dff, dhk):
             f"- Kompetitor: {target_komp}")
 
 def call_ai(msgs, ctx):
+    if not GEMINI_OK:
+        return "❌ Library google-generativeai belum terinstal. Tolong tambahkan ke requirements.txt atau jalankan pip install google-generativeai."
+    
+    api_key = st.secrets.get("GEMINI_API_KEY") or os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "⚠️ Tolong atur GEMINI_API_KEY di file .streamlit/secrets.toml atau environment variables."
+
     try:
+        genai.configure(api_key=api_key)
         sys_p = (f"Kamu adalah analis CX senior perbankan. "
                  f"Jawab ringkas, insightful, actionable dalam Bahasa Indonesia. "
                  f"Sertakan angka spesifik. Maksimal 4 paragraf pendek.\n\n"
-                 f"Konteks:\n{ctx}")
-        r = requests.post("https://api.anthropic.com/v1/messages",
-            headers={"Content-Type":"application/json"},
-            json={"model":"claude-sonnet-4-6","max_tokens":800,
-                  "system":sys_p,"messages":msgs}, timeout=30)
-        if r.status_code==200: return r.json()['content'][0]['text']
-        return f"Error {r.status_code}: {r.text[:200]}"
+                 f"Konteks Data:\n{ctx}")
+                 
+        model = genai.GenerativeModel('gemini-1.5-flash', system_instruction=sys_p)
+        
+        # Konversi format role chat ke format Gemini
+        gemini_history = []
+        for m in msgs[:-1]:
+            role = "user" if m["role"] == "user" else "model"
+            gemini_history.append({"role": role, "parts": [m["content"]]})
+            
+        chat = model.start_chat(history=gemini_history)
+        response = chat.send_message(msgs[-1]["content"])
+        return response.text
     except Exception as e:
-        return f"Gagal menghubungi AI: {e}"
+        return f"Gagal menghubungi AI Gemini: {e}"
 
 # ── Safe pie chart (tanpa hover_data, pakai hovertemplate) ────────
 def safe_pie(df_pie, values, names, title="", hole=0.55, colors=None):
-    """Pie chart yang aman di Plotly 5.24.1 — tidak pakai hover_data."""
     fig = px.pie(df_pie, values=values, names=names, hole=hole,
                  color_discrete_sequence=colors or px.colors.qualitative.Set2)
     fig.update_traces(
@@ -452,7 +473,7 @@ st.markdown("""
   🏦 BANK XYZ — CX INTELLIGENCE DASHBOARD
   </h1>
   <p style='color:#334155 !important;font-size:11px;margin:3px 0 0;'>
-  Advanced Customer Experience Analytics · Dark Edition v4.0
+  Advanced Customer Experience Analytics · Dark Edition v4.0 (Gemini Powered)
   </p>
 </div>""", unsafe_allow_html=True)
 
@@ -507,7 +528,6 @@ with t1:
     r1,r2 = st.columns([1,2.3])
     with r1:
         sh("NPS Composition")
-        # NPS XYZ donut — safe_pie tanpa hover_data conflict
         cp_xyz = df['G1A_CAT'].value_counts().reset_index()
         cp_xyz.columns = ['K','N']
         fd_xyz = px.pie(cp_xyz, values='N', names='K', hole=0.62,
@@ -517,11 +537,10 @@ with t1:
             marker=dict(line=dict(color=BG,width=2)),
             hovertemplate='<b>%{label}</b><br>Jumlah: %{value}<br>%{percent}<extra></extra>')
         fd_xyz.add_annotation(text=f"XYZ<br><b>{ns:.0f}</b>",
-            x=0.5,y=0.5,showarrow=False,font=dict(size=13,color='#E2E8F0'))
-        fd_xyz.update_layout(height=210,margin=dict(t=25,b=8,l=0,r=0))
+            x=0.5,y=0.5,showarrow=False,font=dict(size=14,color='#E2E8F0'))
+        fd_xyz.update_layout(height=260, margin=dict(t=30,b=20,l=20,r=20)) # Ukuran diperbesar sedikit
         st.plotly_chart(elo(fd_xyz), use_container_width=True)
 
-        # NPS Kompetitor donut
         if len(df_hk)>0:
             cp_k = df_hk['G1C_CAT'].value_counts().reset_index()
             cp_k.columns = ['K','N']
@@ -532,8 +551,8 @@ with t1:
                 marker=dict(line=dict(color=BG,width=2)),
                 hovertemplate='<b>%{label}</b><br>Jumlah: %{value}<br>%{percent}<extra></extra>')
             fd_k.add_annotation(text=f"Komp<br><b>{nk:.0f}</b>",
-                x=0.5,y=0.5,showarrow=False,font=dict(size=12,color='#E2E8F0'))
-            fd_k.update_layout(height=200,margin=dict(t=20,b=8,l=0,r=0))
+                x=0.5,y=0.5,showarrow=False,font=dict(size=13,color='#E2E8F0'))
+            fd_k.update_layout(height=260, margin=dict(t=30,b=20,l=20,r=20))
             st.plotly_chart(elo(fd_k,f"NPS {target_komp}"), use_container_width=True)
 
     with r2:
@@ -561,7 +580,6 @@ with t1:
                 "Gap":round(gp,2) if not np.isnan(gp) else None})
         sdf = pd.DataFrame(rows)
         fig_sc = go.Figure()
-        # customdata untuk tooltip lengkap
         cd_sc = sdf[['XYZ','Kompetitor','Gap']].values
         fig_sc.add_trace(go.Bar(name='Bank XYZ', y=sdf['Dimensi'], x=sdf['XYZ'],
             orientation='h', marker_color=C_XYZ,
@@ -573,7 +591,7 @@ with t1:
             x=pd.to_numeric(sdf['Kompetitor'],errors='coerce'),
             orientation='h', marker_color=C_KOMP, opacity=0.85,
             hovertemplate='<b>%{y}</b><br>Kompetitor: %{x:.2f}<extra></extra>'))
-        fig_sc.update_layout(barmode='group', xaxis_range=[4,6.7], height=400)
+        fig_sc.update_layout(barmode='group', xaxis_range=[3.8, 7.0], height=450) # Range diperlebar
         st.plotly_chart(elo(fig_sc), use_container_width=True)
 
     r3,r4 = st.columns(2)
@@ -592,8 +610,8 @@ with t1:
                 color_discrete_map={'🌟 Top 5':C_XYZ,'⚠️ Bottom 5':C_KOMP})
             ftb.update_traces(texttemplate='%{x:.2f}', textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Skor: %{x:.3f}<extra></extra>')
-            ftb.update_xaxes(range=[4.5,6.5])
-            st.plotly_chart(elo(ftb,h=380), use_container_width=True)
+            ftb.update_xaxes(range=[4.0, 7.0]) # Diperlebar
+            st.plotly_chart(elo(ftb,h=420), use_container_width=True)
 
     with r4:
         sh("📊 Matriks Korelasi")
@@ -607,7 +625,7 @@ with t1:
             color_continuous_scale='RdBu', aspect='auto', zmin=-1, zmax=1)
         fco.update_traces(
             hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<extra></extra>')
-        st.plotly_chart(elo(fco,h=380), use_container_width=True)
+        st.plotly_chart(elo(fco,h=420), use_container_width=True)
 
     sh("📈 Tren per Periode")
     tren = df.groupby('Periode').agg(
@@ -621,7 +639,7 @@ with t1:
             line=dict(color=cc,width=2), marker=dict(size=6),
             customdata=tren['N'],
             hovertemplate=f'<b>{nl}</b><br>Periode: %{{x}}<br>Nilai: %{{y:.2f}}<br>N: %{{customdata}}<extra></extra>'))
-    st.plotly_chart(elo(ftr,"Tren Bulanan NPS, Kepuasan & Loyalitas",300),
+    st.plotly_chart(elo(ftr,"Tren Bulanan NPS, Kepuasan & Loyalitas",350),
         use_container_width=True)
 
     sh("🗺️ NPS per Provinsi")
@@ -636,8 +654,8 @@ with t1:
                       'Kepuasan: %{customdata[0]:.2f}<br>'
                       'Loyalitas: %{customdata[1]:.2f}<br>'
                       'N: %{customdata[2]}<extra></extra>')
-    fpn.update_xaxes(range=[7,10.5])
-    st.plotly_chart(elo(fpn,h=400), use_container_width=True)
+    fpn.update_xaxes(range=[6,11.5]) # Range cukup lebar
+    st.plotly_chart(elo(fpn,h=450), use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════
 # TAB 2 — KINERJA LAYANAN
@@ -665,7 +683,7 @@ with t2:
             color_continuous_scale='RdYlGn', aspect='auto', zmin=4, zmax=6)
         fhm.update_traces(
             hovertemplate='Cabang: <b>%{y}</b><br>Dimensi: <b>%{x}</b><br>Skor: <b>%{z:.2f}</b><extra></extra>')
-        fhm.update_layout(height=max(400,len(hd)*20))
+        fhm.update_layout(height=max(450,len(hd)*25)) # Baris heatmap lebih tinggi
         st.plotly_chart(elo(fhm,"Heatmap (Merah=Rendah → Hijau=Tinggi)"),
             use_container_width=True)
         if len(hd)>0:
@@ -712,8 +730,8 @@ with t2:
                         x=kv2, y=lb2, orientation='h',
                         marker_color=C_KOMP, opacity=0.8,
                         hovertemplate=f'<b>%{{y}}</b><br>Sat.Komp: %{{x:.2f}}<extra></extra>'))
-                fdd.update_layout(barmode='group', xaxis_range=[3,6.7],
-                    height=max(350,mn2*28))
+                fdd.update_layout(barmode='group', xaxis_range=[3, 7.5], # Ekstra lebar untuk menghindari potong
+                    height=max(400,mn2*35))
                 st.plotly_chart(elo(fdd,f"Importance vs Satisfaction — {sel_dim}"),
                     use_container_width=True)
             with b2:
@@ -724,7 +742,7 @@ with t2:
                 fg2.update_traces(marker_color=gd2['W'],
                     texttemplate='%{x:.2f}', textposition='outside',
                     hovertemplate='<b>%{y}</b><br>Gap: %{x:.3f}<extra></extra>')
-                fg2.update_layout(height=max(350,mn2*28))
+                fg2.update_layout(height=max(400,mn2*35))
                 st.plotly_chart(elo(fg2,"Gap: Sat − Imp"), use_container_width=True)
                 worst=gd2.iloc[0]
                 if worst['Gap']<0:
@@ -753,7 +771,7 @@ with t2:
                     hovertemplate='<b>%{text}</b><br>Sat.Komp: %{x:.2f}<extra></extra>'))
             fi2.add_vline(x=ms2,line_dash="dash",line_color="#334155")
             fi2.add_hline(y=mi2,line_dash="dash",line_color="#334155")
-            fi2.update_layout(height=480)
+            fi2.update_layout(height=520, margin=dict(t=50,b=50,l=50,r=50))
             st.plotly_chart(elo(fi2,f"IPA Matrix — {sel_dim}"),use_container_width=True)
 
     st.markdown("---")
@@ -768,7 +786,7 @@ with t2:
                 color_discrete_map={'Aktual':C_KOMP,'Toleransi':C_XYZ})
             fw.update_traces(texttemplate='%{y:.1f} mnt',textposition='outside',
                 hovertemplate='<b>%{x}</b><br>%{y:.2f} menit<extra></extra>')
-            fw.update_yaxes(range=[0,dft2['TL6'].mean()*1.6])
+            fw.update_yaxes(range=[0,dft2['TL6'].mean()*1.8]) # Range lebih tinggi
             st.plotly_chart(elo(fw,"⏳ Teller: Aktual vs Toleransi"),use_container_width=True)
             ib(f"Tunggu Teller: **{dft2['TL5'].mean():.1f} mnt** "
                f"(toleransi {dft2['TL6'].mean():.1f} mnt).")
@@ -781,7 +799,7 @@ with t2:
                 color_discrete_map={'Aktual':C_KOMP,'Toleransi':C_XYZ})
             fw2.update_traces(texttemplate='%{y:.1f} mnt',textposition='outside',
                 hovertemplate='<b>%{x}</b><br>%{y:.2f} menit<extra></extra>')
-            fw2.update_yaxes(range=[0,dfc2['CS6'].mean()*1.6])
+            fw2.update_yaxes(range=[0,dfc2['CS6'].mean()*1.8])
             st.plotly_chart(elo(fw2,"⏳ CS: Aktual vs Toleransi"),use_container_width=True)
     with wt3:
         jt=df['TL1'].dropna().value_counts().reset_index(); jt.columns=['Jam','Teller']
@@ -794,7 +812,7 @@ with t2:
         fj.add_trace(go.Bar(name='CS',x=jd['Jam'],y=jd['CS'],
             marker_color=C_KOMP,
             hovertemplate='<b>%{x}</b><br>CS: %{y:.0f}<extra></extra>'))
-        fj.update_layout(barmode='group',xaxis_tickangle=-25,height=280)
+        fj.update_layout(barmode='group',xaxis_tickangle=-45,height=350)
         st.plotly_chart(elo(fj,"⏰ Jam Paling Sibuk"),use_container_width=True)
         if len(jt)>0: ib(f"Jam tersibuk Teller: **{jt.iloc[0]['Jam']}**.")
 
@@ -815,7 +833,7 @@ with t2:
         fwc.add_trace(go.Bar(name='Toleransi',x=wcd['CABANG'],y=wcd['Toleransi'],
             marker_color=C_XYZ,opacity=0.7,
             hovertemplate='<b>%{x}</b><br>Toleransi: %{y:.1f} mnt<extra></extra>'))
-        fwc.update_layout(barmode='overlay',xaxis_tickangle=-30,height=370)
+        fwc.update_layout(barmode='overlay',xaxis_tickangle=-45,height=420)
         st.plotly_chart(elo(fwc,f"Waktu Tunggu {wtp} per Cabang"),use_container_width=True)
         ot=wcd[wcd['Aktual']>wcd['Toleransi']]
         if len(ot)>0:
@@ -840,7 +858,6 @@ with t3:
     b1,b2=st.columns(2)
     with b1:
         sh("🕸️ Radar Brand XYZ vs Kompetitor")
-        # Label radar dipotong lebih pendek agar tidak overlap
         blb_short=[l[:18]+'…' if len(l)>18 else l for l in blb]
         fr=go.Figure()
         fr.add_trace(go.Scatterpolar(r=bxv,theta=blb_short,fill='toself',
@@ -851,11 +868,11 @@ with t3:
             hovertemplate=f'<b>%{{theta}}</b><br>{target_komp}: %{{r:.2f}}<extra></extra>'))
         fr.update_layout(
             polar=dict(bgcolor=SURFACE,
-                radialaxis=dict(visible=True,range=[3,6],gridcolor=GRID,
+                radialaxis=dict(visible=True,range=[3,6.5],gridcolor=GRID,
                     tickfont=dict(color='#94A3B8',size=9)),
-                angularaxis=dict(tickfont=dict(color='#CBD5E1',size=9))),
-            legend=dict(orientation="h",y=-0.12),
-            height=500, margin=dict(t=40,b=70,l=70,r=70))
+                angularaxis=dict(tickfont=dict(color='#CBD5E1',size=10))),
+            legend=dict(orientation="h",y=-0.15),
+            height=550, margin=dict(t=50,b=90,l=90,r=90)) # Ekstra lega untuk radar label
         st.plotly_chart(elo(fr),use_container_width=True)
 
     with b2:
@@ -873,12 +890,12 @@ with t3:
         fib=px.scatter(bdf,x='Satisfaction',y='Importance',
             text='Label',color='Kuadran',color_discrete_map=qcb)
         fib.update_traces(marker=dict(size=10),textposition='top center',
-            textfont=dict(size=8),
+            textfont=dict(size=9),
             hovertemplate='<b>%{text}</b><br>Imp: %{y:.2f}<br>Sat: %{x:.2f}<extra></extra>',
             selector=dict(mode='markers+text'))
         fib.add_vline(x=sb2,line_dash="dash",line_color="#334155")
         fib.add_hline(y=mb,line_dash="dash",line_color="#334155")
-        fib.update_layout(height=500)
+        fib.update_layout(height=550, margin=dict(t=40,b=40,l=40,r=40))
         st.plotly_chart(elo(fib),use_container_width=True)
 
     sh("📊 Gap Kompetitif per Atribut Brand")
@@ -891,8 +908,8 @@ with t3:
         customdata=gb[['XYZ','Komp']].values,
         hovertemplate='<b>%{y}</b><br>XYZ: %{customdata[0]:.2f}<br>'
                       'Komp: %{customdata[1]:.2f}<br>Gap: %{x:.2f}<extra></extra>')
-    fgb.update_layout(height=max(500,len(gb)*22),
-        yaxis=dict(tickfont=dict(size=9),automargin=True))
+    fgb.update_layout(height=max(550,len(gb)*28),
+        yaxis=dict(tickfont=dict(size=10),automargin=True))
     st.plotly_chart(elo(fgb,f"Gap Brand XYZ vs {target_komp}"),use_container_width=True)
     tg=gb.nlargest(1,'Gap').iloc[0]; bg2=gb.nsmallest(1,'Gap').iloc[0]
     ib(f"Keunggulan terbesar XYZ: **{tg['Atribut']}** (+{tg['Gap']:.2f}). "
@@ -907,6 +924,7 @@ with t3:
             color_discrete_sequence=[C_XYZ],text='N')
         fsw.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
+        fsw.update_xaxes(range=[0, bo['N'].max()*1.3])
         st.plotly_chart(elo(fsw,"Bank Lain Aktif"),use_container_width=True)
     with sw2:
         sp=df['A1B'].value_counts().reset_index(); sp.columns=['Bank','N']
@@ -979,7 +997,7 @@ with t4:
                     selector=dict(mode='markers+text'))
                 fi4.add_vline(x=ms4,line_dash="dash",line_color="#334155")
                 fi4.add_hline(y=mi4,line_dash="dash",line_color="#334155")
-                fi4.update_layout(height=460)
+                fi4.update_layout(height=520, margin=dict(t=50,b=50,l=50,r=50))
                 st.plotly_chart(elo(fi4,f"IPA — {sel_tp}"),use_container_width=True)
             with tp2:
                 st.markdown("**📋 Prioritas per Kuadran:**")
@@ -1003,8 +1021,8 @@ with t4:
                 fb4.add_trace(go.Bar(name=f'Sat. {target_komp}',x=lb4,y=kv4,
                     marker_color=C_KOMP,opacity=0.8,
                     hovertemplate=f'<b>%{{x}}</b><br>Sat.{target_komp}: %{{y:.2f}}<extra></extra>'))
-            fb4.update_layout(barmode='group',yaxis_range=[3,6.7],
-                xaxis_tickangle=-30,height=420)
+            fb4.update_layout(barmode='group',yaxis_range=[3, 7.5],
+                xaxis_tickangle=-45,height=480)
             st.plotly_chart(elo(fb4,f"Comparison — {sel_tp}"),use_container_width=True)
 
         if kv4:
@@ -1018,7 +1036,7 @@ with t4:
                 customdata=gt4[['XYZ','Komp']].values,
                 hovertemplate='<b>%{y}</b><br>XYZ: %{customdata[0]:.2f}<br>'
                               'Komp: %{customdata[1]:.2f}<br>Gap: %{x:.2f}<extra></extra>')
-            fg4.update_layout(height=max(380,mt4*22),yaxis=dict(automargin=True))
+            fg4.update_layout(height=max(400,mt4*28),yaxis=dict(automargin=True))
             st.plotly_chart(elo(fg4,f"Gap XYZ vs {target_komp} — {sel_tp}"),
                 use_container_width=True)
 
@@ -1031,7 +1049,7 @@ with t4:
         color_discrete_map={'TELLER':C_XYZ,'CS':C_KOMP,'KEDUANYA':'#FBBF24'})
     fd1.update_traces(texttemplate='%{y:.2f}',textposition='outside',
         hovertemplate='<b>%{x}</b><br>Skor: %{y:.3f}<extra></extra>')
-    fd1.update_yaxes(range=[4.5,6.5])
+    fd1.update_yaxes(range=[4.5, 7.2]) # Mencegah teks kepotong di atas bar
     st.plotly_chart(elo(fd1,"Skor per Jenis Transaksi"),use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1077,8 +1095,8 @@ with t5:
         fep.add_trace(go.Bar(name=target_komp,x=elp[:len(epkv)],y=epkv,
             marker_color=C_KOMP,text=np.round(epkv,2),textposition='outside',
             hovertemplate=f'<b>%{{x}}</b><br>{target_komp}: %{{y:.3f}}<extra></extra>'))
-        fep.update_layout(barmode='group',yaxis_range=[3,6.8],
-            xaxis_tickangle=-20,height=360)
+        fep.update_layout(barmode='group',yaxis_range=[3,7.5], # Lebih lapang atasnya
+            xaxis_tickangle=-45,height=420)
         st.plotly_chart(elo(fep),use_container_width=True)
     with ec2:
         sh("😠 Emosi Negatif")
@@ -1089,8 +1107,8 @@ with t5:
         fen.add_trace(go.Bar(name=target_komp,x=eln[:len(enkv)],y=enkv,
             marker_color=C_KOMP,text=np.round(enkv,2),textposition='outside',
             hovertemplate=f'<b>%{{x}}</b><br>{target_komp}: %{{y:.3f}}<extra></extra>'))
-        fen.update_layout(barmode='group',yaxis_range=[1,4],
-            xaxis_tickangle=-20,height=360)
+        fen.update_layout(barmode='group',yaxis_range=[1,5],
+            xaxis_tickangle=-45,height=420)
         st.plotly_chart(elo(fen,"↓ Makin Rendah Makin Baik"),use_container_width=True)
 
     sh("💎 Brand Equity — 15 Atribut")
@@ -1114,8 +1132,8 @@ with t5:
     fhe.add_trace(go.Bar(name=target_komp,x=lhb,y=hkv[:len(lhb)],
         marker_color=C_KOMP,text=np.round(hkv[:len(lhb)],2),textposition='outside',
         hovertemplate=f'<b>%{{x}}</b><br>{target_komp}: %{{y:.3f}}<extra></extra>'))
-    fhe.update_layout(barmode='group',yaxis_range=[3,6.8],
-        xaxis_tickangle=-28,height=380)
+    fhe.update_layout(barmode='group',yaxis_range=[3,7.5],
+        xaxis_tickangle=-45,height=480)
     st.plotly_chart(elo(fhe,"Brand Equity XYZ vs Kompetitor"),use_container_width=True)
 
     sh("📈 Korelasi Emosi vs Outcome")
@@ -1129,7 +1147,7 @@ with t5:
             aspect='auto',zmin=-1,zmax=1)
         fec.update_traces(
             hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<extra></extra>')
-        st.plotly_chart(elo(fec,h=320),use_container_width=True)
+        st.plotly_chart(elo(fec,h=380),use_container_width=True)
     with e_c2:
         s1df=df[['G1A','G1A_CAT']].copy(); s1df['Emosi Pos']=epas
         fs1=px.scatter(s1df,x='Emosi Pos',y='G1A',color='G1A_CAT',
@@ -1138,7 +1156,7 @@ with t5:
         fs1.update_traces(
             hovertemplate='Emosi Pos: %{x:.2f}<br>NPS: %{y:.1f}<extra></extra>',
             selector=dict(mode='markers'))
-        st.plotly_chart(elo(fs1,"Emosi Pos vs NPS",320),use_container_width=True)
+        st.plotly_chart(elo(fs1,"Emosi Pos vs NPS",380),use_container_width=True)
     with e_c3:
         s2df=df[['F1A','G1A_CAT']].copy(); s2df['Emosi Pos']=epas
         fs2=px.scatter(s2df,x='Emosi Pos',y='F1A',color='G1A_CAT',
@@ -1147,7 +1165,7 @@ with t5:
         fs2.update_traces(
             hovertemplate='Emosi Pos: %{x:.2f}<br>Loyalitas: %{y:.2f}<extra></extra>',
             selector=dict(mode='markers'))
-        st.plotly_chart(elo(fs2,"Emosi Pos vs Loyalitas",320),use_container_width=True)
+        st.plotly_chart(elo(fs2,"Emosi Pos vs Loyalitas",380),use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════
 # TAB 6 — DIGITALISASI
@@ -1173,8 +1191,8 @@ with t6:
             color=dv,color_continuous_scale='Blues',text=np.round(dv,2))
         fdg.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>Skor: %{x:.3f}<extra></extra>')
-        fdg.update_xaxes(range=[3,6.8])
-        st.plotly_chart(elo(fdg,"Skor Persepsi Digitalisasi"),use_container_width=True)
+        fdg.update_xaxes(range=[3, 7.5])
+        st.plotly_chart(elo(fdg,"Skor Persepsi Digitalisasi", h=400),use_container_width=True)
     with dg2:
         if "T_J1_1" in df.columns:
             dp=df.groupby('PROV')["T_J1_1"].mean().reset_index()
@@ -1183,8 +1201,8 @@ with t6:
                 color='Skor',color_continuous_scale='Blues',text='Skor')
             fdp.update_traces(texttemplate='%{x:.2f}',textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Skor: %{x:.3f}<extra></extra>')
-            fdp.update_xaxes(range=[3,6.8])
-            st.plotly_chart(elo(fdp,"Digitalisasi per Provinsi"),use_container_width=True)
+            fdp.update_xaxes(range=[3, 7.5])
+            st.plotly_chart(elo(fdp,"Digitalisasi per Provinsi", h=400),use_container_width=True)
 
     sh("🖥️ Sarana Elektronik")
     slc=[f"T_SL2_{i}" for i in range(1,17) if f"T_SL2_{i}" in df.columns]
@@ -1195,8 +1213,8 @@ with t6:
             color=slv,color_continuous_scale='Teal',text=np.round(slv,2))
         fsl.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>Skor: %{x:.3f}<extra></extra>')
-        fsl.update_xaxes(range=[3,6.8])
-        fsl.update_layout(yaxis=dict(automargin=True,tickfont=dict(size=9)))
+        fsl.update_xaxes(range=[3, 7.5])
+        fsl.update_layout(height=500, yaxis=dict(automargin=True,tickfont=dict(size=10)))
         st.plotly_chart(elo(fsl,"Ketersediaan & Fungsi Sarana"),use_container_width=True)
     with sl2:
         if "T_J1_1" in df.columns:
@@ -1207,7 +1225,7 @@ with t6:
             fds.update_traces(
                 hovertemplate='Digitalisasi: %{x:.2f}<br>Kepuasan: %{y:.2f}<extra></extra>',
                 selector=dict(mode='markers'))
-            st.plotly_chart(elo(fds,"Digitalisasi vs Kepuasan"),use_container_width=True)
+            st.plotly_chart(elo(fds,"Digitalisasi vs Kepuasan", h=500),use_container_width=True)
 
     sh("📋 E-Form & Saran")
     ef1,ef2=st.columns(2)
@@ -1219,7 +1237,7 @@ with t6:
                 color_discrete_sequence=['#8B5CF6','#3B82F6','#F43F5E'])
             fee.update_traces(
                 hovertemplate='<b>%{label}</b><br>%{value} resp.<br>%{percent}<extra></extra>')
-            st.plotly_chart(elo(fee,"Penggunaan E-Form"),use_container_width=True)
+            st.plotly_chart(elo(fee,"Penggunaan E-Form", h=350),use_container_width=True)
     with ef2:
         if 'D4' in df.columns:
             ea=df['D4'].dropna().value_counts().reset_index()
@@ -1228,7 +1246,8 @@ with t6:
                 color_discrete_sequence=['#0EA5E9'],text='N')
             fea.update_traces(textposition='outside',
                 hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
-            st.plotly_chart(elo(fea,"Awareness E-Form"),use_container_width=True)
+            fea.update_xaxes(range=[0, ea['N'].max()*1.3])
+            st.plotly_chart(elo(fea,"Awareness E-Form", h=350),use_container_width=True)
 
     j2m={"T_J2_1":"Digitalisasi Layanan","T_J2_2":"Digital Signage",
          "T_J2_3":"Smart Table","T_J2_4":"Tablet Survey","T_J2_5":"Akses Cabang"}
@@ -1238,7 +1257,7 @@ with t6:
         sr=df[j2c].dropna().value_counts().reset_index()
         sr.columns=['Saran','N']
         sr=sr[~sr['Saran'].str.strip().isin(['','None','Tidak Ada','Tidak Ada /  Tidak Tahu'])]
-        if len(sr)>0: st.dataframe(sr,use_container_width=True,hide_index=True,height=180)
+        if len(sr)>0: st.dataframe(sr,use_container_width=True,hide_index=True,height=250)
 
 # ═══════════════════════════════════════════════════════════════════
 # TAB 7 — CLUSTERING
@@ -1265,7 +1284,6 @@ with t7:
             cl_color=st.selectbox("Warna marker by:",key="sb_clc",
                 options=["Cluster","NPS Category","Provinsi","Gender"])
 
-        # Tambah emosi positif
         df_cl=df.copy()
         epc_cl=[c for c in["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11","T_I1A_14",
             "T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in df_cl.columns]
@@ -1298,7 +1316,7 @@ with t7:
                     color_discrete_sequence=[C_XYZ])
                 fel.update_traces(
                     hovertemplate='K=%{x}<br>Inertia: %{y:.0f}<extra></extra>')
-                st.plotly_chart(elo(fel,"Elbow Chart — Pilih K di titik siku",300),
+                st.plotly_chart(elo(fel,"Elbow Chart — Pilih K di titik siku",400),
                     use_container_width=True)
 
             pca=PCA(n_components=2,random_state=42)
@@ -1316,7 +1334,6 @@ with t7:
                 uniq=df_pca[color_col].dropna().unique()
                 color_d={u:c for u,c in zip(uniq,px.colors.qualitative.Plotly)}
 
-            # Tooltip lengkap via customdata (tidak pakai hover_data dict)
             cd_cols=['CABANG','PROV','G1A','E1A','F1A','G1A_CAT','Cluster']
             cd_cols_exist=[c for c in cd_cols if c in df_pca.columns]
             fpc=px.scatter(df_pca,x='PC1',y='PC2',
@@ -1332,7 +1349,7 @@ with t7:
                                'Kepuasan: %{customdata[3]:.2f}<br>'
                                'Loyalitas: %{customdata[4]:.2f}<br>'
                                'Cluster: %{customdata[6]}<extra></extra>'))
-            fpc.update_layout(height=480)
+            fpc.update_layout(height=550)
             st.plotly_chart(elo(fpc,
                 f"PCA 2D Cluster Plot (variance explained: {(var1+var2)*100:.1f}%)"),
                 use_container_width=True)
@@ -1359,9 +1376,9 @@ with t7:
                 fig_cl_r.update_layout(
                     polar=dict(bgcolor=SURFACE,
                         radialaxis=dict(visible=True,gridcolor=GRID,
-                            tickfont=dict(color='#94A3B8',size=8)),
-                        angularaxis=dict(tickfont=dict(color='#CBD5E1',size=9))),
-                    height=420,margin=dict(t=40,b=50,l=50,r=50))
+                            tickfont=dict(color='#94A3B8',size=9)),
+                        angularaxis=dict(tickfont=dict(color='#CBD5E1',size=10))),
+                    height=500,margin=dict(t=50,b=60,l=60,r=60))
                 st.plotly_chart(elo(fig_cl_r,"Radar Profil per Cluster"),
                     use_container_width=True)
 
@@ -1372,6 +1389,7 @@ with t7:
                 labels={'N':'Jumlah'})
             fnc.update_traces(textposition='inside',
                 hovertemplate='Cluster %{x}<br>N: %{y}<extra></extra>')
+            fnc.update_layout(height=450)
             st.plotly_chart(elo(fnc,"Komposisi NPS per Cluster"),use_container_width=True)
 
             if 'G1A' in df_pca.columns:
@@ -1393,28 +1411,31 @@ with t8:
             color_discrete_sequence=[C_XYZ,'#60A5FA'])
         fg8.update_traces(
             hovertemplate='<b>%{label}</b><br>%{value} resp.<br>%{percent}<extra></extra>')
-        st.plotly_chart(elo(fg8,"Gender"),use_container_width=True)
+        st.plotly_chart(elo(fg8,"Gender", h=350),use_container_width=True)
     with d2:
         ac=df['S2_2'].value_counts().reset_index(); ac.columns=['Usia','N']
         fa=px.bar(ac,x='Usia',y='N',color_discrete_sequence=[C_XYZ],text='N')
         fa.update_traces(textposition='outside',
             hovertemplate='<b>%{x}</b><br>%{y} responden<extra></extra>')
-        fa.update_layout(xaxis_tickangle=-20)
-        st.plotly_chart(elo(fa,"Usia"),use_container_width=True)
+        fa.update_layout(xaxis_tickangle=-45)
+        fa.update_yaxes(range=[0, ac['N'].max()*1.3])
+        st.plotly_chart(elo(fa,"Usia", h=350),use_container_width=True)
     with d3:
         ec8=df['P3'].value_counts().reset_index(); ec8.columns=['Pend','N']
         fe8=px.bar(ec8,x='N',y='Pend',orientation='h',
             color_discrete_sequence=[C_XYZ],text='N')
         fe8.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
-        st.plotly_chart(elo(fe8,"Pendidikan"),use_container_width=True)
+        fe8.update_xaxes(range=[0, ec8['N'].max()*1.3])
+        st.plotly_chart(elo(fe8,"Pendidikan", h=350),use_container_width=True)
     with d4:
         jc8=df['P4'].value_counts().reset_index(); jc8.columns=['Pekerjaan','N']
         fj8=px.bar(jc8,x='N',y='Pekerjaan',orientation='h',
             color_discrete_sequence=['#8B5CF6'],text='N')
         fj8.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
-        st.plotly_chart(elo(fj8,"Pekerjaan"),use_container_width=True)
+        fj8.update_xaxes(range=[0, jc8['N'].max()*1.3])
+        st.plotly_chart(elo(fj8,"Pekerjaan", h=350),use_container_width=True)
 
     ss1,ss2=st.columns(2)
     with ss1:
@@ -1423,14 +1444,16 @@ with t8:
             color_discrete_sequence=[C_XYZ],text='N')
         fs8.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
-        st.plotly_chart(elo(fs8,"Tingkat Pengeluaran (SES)"),use_container_width=True)
+        fs8.update_xaxes(range=[0, sc8['N'].max()*1.3])
+        st.plotly_chart(elo(fs8,"Tingkat Pengeluaran (SES)", h=350),use_container_width=True)
     with ss2:
         ic8=df['P6'].value_counts().reset_index(); ic8.columns=['Penghasilan','N']
         fi8=px.bar(ic8,x='N',y='Penghasilan',orientation='h',
             color_discrete_sequence=['#10B981'],text='N')
         fi8.update_traces(textposition='outside',
             hovertemplate='<b>%{y}</b><br>%{x} responden<extra></extra>')
-        st.plotly_chart(elo(fi8,"Distribusi Penghasilan"),use_container_width=True)
+        fi8.update_xaxes(range=[0, ic8['N'].max()*1.3])
+        st.plotly_chart(elo(fi8,"Distribusi Penghasilan", h=350),use_container_width=True)
 
     sh("🗺️ Peta Geografis")
     geo=df.groupby(['PROV','KABKOTA','CABANG']).agg(
@@ -1440,7 +1463,7 @@ with t8:
     ftr8=px.treemap(geo,path=[px.Constant("Nasional"),'PROV','KABKOTA','CABANG'],
         values='N',color=cm8,color_continuous_scale='RdYlGn',
         hover_data=['NPS','Kepuasan','Loyalitas'])
-    ftr8.update_layout(height=480)
+    ftr8.update_layout(height=500)
     st.plotly_chart(elo(ftr8,f"Treemap (Warna={cm8})"),use_container_width=True)
 
     sh("🔀 Segmentasi Interaktif")
@@ -1469,13 +1492,14 @@ with t8:
                 customdata=sa8[['Std','N']].values,
                 hovertemplate='<b>%{y}</b><br>Mean: %{x:.3f}<br>'
                               'Std: %{customdata[0]:.3f}<br>N: %{customdata[1]}<extra></extra>')
+            fs8b.update_xaxes(range=[0, max(sa8['Mean']+sa8['Std'])*1.2]) # Space utk error bar + text
         else:
             fs8b=px.box(df,x=sk8,y=mk8,color=sk8,points='outliers')
-            fs8b.update_layout(xaxis_tickangle=-20)
+            fs8b.update_layout(xaxis_tickangle=-45)
             fs8b.update_traces(
                 hovertemplate='<b>%{x}</b><br>%{y:.2f}<extra></extra>')
         st.plotly_chart(elo(fs8b,
-            f"{met.split('→')[1]} per {seg.split('→')[1]}",420),
+            f"{met.split('→')[1]} per {seg.split('→')[1]}",480),
             use_container_width=True)
 
     sh("🔄 Frekuensi Transaksi vs Outcome")
@@ -1488,7 +1512,8 @@ with t8:
             marker_color=cc,text=fr8[cn].round(2),textposition='outside',
             customdata=fr8['N'],
             hovertemplate=f'<b>%{{x}}</b><br>{nl}: %{{y:.2f}}<br>N: %{{customdata}}<extra></extra>'))
-    ffr.update_layout(barmode='group',xaxis_tickangle=-15,height=350)
+    ffr.update_layout(barmode='group',xaxis_tickangle=-25,height=420)
+    ffr.update_yaxes(range=[0, max([fr8['NPS'].max(), fr8['Kepuasan'].max(), fr8['Loyalitas'].max()]) * 1.3])
     st.plotly_chart(elo(ffr,"Frekuensi Transaksi vs Outcome"),use_container_width=True)
 
     sh("🎯 Tujuan Buka Rekening vs Loyalitas")
@@ -1502,8 +1527,8 @@ with t8:
     ftj.update_traces(texttemplate='%{x:.2f}',textposition='outside',
         customdata=tjagg['N'].values,
         hovertemplate='<b>%{y}</b><br>Loyalitas: %{x:.3f}<br>N: %{customdata}<extra></extra>')
-    ftj.update_xaxes(range=[4.5,6.5])
-    st.plotly_chart(elo(ftj,"Loyalitas per Tujuan Buka Rekening"),
+    ftj.update_xaxes(range=[4.0, 7.0])
+    st.plotly_chart(elo(ftj,"Loyalitas per Tujuan Buka Rekening", h=450),
         use_container_width=True)
 
 # ═══════════════════════════════════════════════════════════════════
@@ -1526,7 +1551,7 @@ with t9:
     with vh1:
         fnh=px.histogram(df,x='G1A',nbins=11,color='G1A_CAT',
             color_discrete_map=NPS_C,labels={'G1A':'Skor NPS XYZ'})
-        fnh.update_layout(bargap=0.08)
+        fnh.update_layout(bargap=0.08, height=400)
         fnh.update_traces(
             hovertemplate='Skor: %{x}<br>Jumlah: %{y}<extra></extra>')
         st.plotly_chart(elo(fnh,"Distribusi NPS XYZ"),use_container_width=True)
@@ -1534,7 +1559,7 @@ with t9:
         if len(df_hk)>0:
             fnhk=px.histogram(df_hk,x='G1C',nbins=11,color='G1C_CAT',
                 color_discrete_map=NPS_C,labels={'G1C':f'NPS {target_komp}'})
-            fnhk.update_layout(bargap=0.08)
+            fnhk.update_layout(bargap=0.08, height=400)
             fnhk.update_traces(
                 hovertemplate='Skor: %{x}<br>Jumlah: %{y}<extra></extra>')
             st.plotly_chart(elo(fnhk,f"Distribusi NPS {target_komp}"),
@@ -1553,7 +1578,7 @@ with t9:
         mwl=st.slider("Min. panjang kata:",3,7,4,key="sl_mwl9")
 
     cmap9={
-        "G1B — Alasan NPS XYZ":       ("G1B","G1A_CAT",df),
+        "G1B — Alasan NPS XYZ":      ("G1B","G1A_CAT",df),
         "G1D — Alasan NPS Kompetitor": ("G1D","G1C_CAT",df_hk),
         "E1AA — Alasan Kepuasan XYZ":  ("E1AA","G1A_CAT",df),
         "E1BB — Alasan Kepuasan Komp": ("E1BB","G1C_CAT",df_hk),
@@ -1569,7 +1594,7 @@ with t9:
         wcw=[w for w in words if w not in STOP]
         if len(wcw)<5: return None,[]
         if WC_OK:
-            wco=WordCloud(width=700,height=340,background_color=BG,
+            wco=WordCloud(width=800,height=400,background_color=BG,
                 colormap=cm,max_words=mw,stopwords=STOP,
                 prefer_horizontal=0.8).generate(" ".join(wcw))
         else:
@@ -1581,7 +1606,7 @@ with t9:
     wcc1,wcc2=st.columns([1.6,1])
     with wcc1:
         if wco9 and WC_OK:
-            fig_wc9,ax9=plt.subplots(figsize=(7,3.4),facecolor=BG)
+            fig_wc9,ax9=plt.subplots(figsize=(8,4),facecolor=BG)
             ax9.imshow(wco9,interpolation='bilinear'); ax9.axis('off')
             fig_wc9.tight_layout(pad=0); st.pyplot(fig_wc9); plt.close()
         else:
@@ -1594,7 +1619,8 @@ with t9:
                 color_continuous_scale='Blues',text='Frekuensi')
             fkw.update_traces(textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Frekuensi: %{x}<extra></extra>')
-            fkw.update_layout(height=330,showlegend=False)
+            fkw.update_layout(height=400,showlegend=False)
+            fkw.update_xaxes(range=[0, kdf9['Frekuensi'].max()*1.3])
             st.plotly_chart(elo(fkw,"Top 10 Kata Kunci"),use_container_width=True)
 
     sh("💡 Tema: Promoter vs Detractor")
@@ -1617,7 +1643,8 @@ with t9:
                 color_discrete_sequence=['#34D399'],text='Count')
             fp9.update_traces(textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Frekuensi: %{x}<extra></extra>')
-            fp9.update_layout(height=300)
+            fp9.update_layout(height=350)
+            fp9.update_xaxes(range=[0, pdf9['Count'].max()*1.3])
             st.plotly_chart(elo(fp9),use_container_width=True)
     with pa2:
         st.markdown("<span style='color:#F87171;font-weight:700;'>⚠️ Detractor</span>",
@@ -1630,7 +1657,8 @@ with t9:
                 color_discrete_sequence=[C_KOMP],text='Count')
             fd9.update_traces(textposition='outside',
                 hovertemplate='<b>%{y}</b><br>Frekuensi: %{x}<extra></extra>')
-            fd9.update_layout(height=300)
+            fd9.update_layout(height=350)
+            fd9.update_xaxes(range=[0, ddf9['Count'].max()*1.3])
             st.plotly_chart(elo(fd9),use_container_width=True)
     if tw9:
         ib(f"Kata dominan ({fc9}): **'{tw9[0][0]}'** ({tw9[0][1]}x).")
@@ -1667,13 +1695,13 @@ with t9:
          'E1A':'Kepuasan','Alasan NPS':'Alasan NPS','Alasan Kepuasan':'Alasan Kepuasan'}
     ex9={k:v for k,v in dc9.items() if k in vdfd.columns}
     st.dataframe(vdfd[list(ex9.keys())].rename(columns=ex9).sort_values('NPS'),
-        use_container_width=True,height=380,hide_index=True)
+        use_container_width=True,height=450,hide_index=True)
 
 # ═══════════════════════════════════════════════════════════════════
-# TAB 10 — AI ANALYST
+# TAB 10 — AI ANALYST (MENGGUNAKAN GEMINI)
 # ═══════════════════════════════════════════════════════════════════
 with t10:
-    sh("🤖 AI CX Analyst — Powered by Claude")
+    sh("🤖 AI CX Analyst — Powered by Google Gemini")
     st.markdown("""<div class='insight-box'><p>
     Tanyakan apapun tentang data survei ini. AI menjawab berdasarkan data aktual
     sesuai filter aktif. Contoh: "Apa kelemahan utama XYZ?",
@@ -1693,7 +1721,7 @@ with t10:
     for i,(cq,qt) in enumerate(zip(qc,qq)):
         if cq.button(qt,key=f"qq_{i}"):
             st.session_state.chat_history.append({"role":"user","content":qt})
-            with st.spinner("AI menganalisis..."):
+            with st.spinner("Gemini menganalisis..."):
                 rep=call_ai(st.session_state.chat_history,ctx)
             st.session_state.chat_history.append({"role":"assistant","content":rep})
             st.rerun()
@@ -1718,7 +1746,7 @@ with t10:
         if st.button("Kirim 🚀",key="btn_ai10",use_container_width=True):
             if user_in.strip():
                 st.session_state.chat_history.append({"role":"user","content":user_in})
-                with st.spinner("🤖 AI menganalisis..."):
+                with st.spinner("🤖 Gemini menganalisis..."):
                     rep=call_ai(st.session_state.chat_history,ctx)
                 st.session_state.chat_history.append({"role":"assistant","content":rep})
                 st.rerun()
@@ -1734,4 +1762,4 @@ st.markdown("---")
 st.markdown(
     "<p style='text-align:center;color:#1E293B !important;font-size:10px;'>"
     "🚀 Bank XYZ CX Intelligence v4.0 · Dark Mode · K-Means Clustering · "
-    "AI-Powered · Streamlit & Plotly</p>",unsafe_allow_html=True)
+    "Gemini AI-Powered · Streamlit & Plotly</p>",unsafe_allow_html=True)
