@@ -5,16 +5,20 @@ import plotly.graph_objects as go
 import numpy as np
 import re
 from collections import Counter
+import requests
+import json
 
 try:
     from wordcloud import WordCloud
     import matplotlib.pyplot as plt
+    import matplotlib
+    matplotlib.use('Agg')
 except ImportError:
     st.error("Library 'wordcloud' atau 'matplotlib' belum terinstal.")
     st.stop()
 
 # =====================================================================
-# 1. KONFIGURASI
+# 1. KONFIGURASI — DARK MODE
 # =====================================================================
 st.set_page_config(
     page_title="Executive CX Analytics - Bank XYZ",
@@ -24,71 +28,156 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-.stApp { background-color: #F8FAFC !important; }
+/* ── Dark Mode Base ── */
+.stApp { background-color: #0F172A !important; }
+.main .block-container { padding-top: 1rem; }
+
+/* ── Sidebar Dark ── */
 [data-testid="stSidebar"] {
-    background-color: #FFFFFF !important;
-    border-right: 1px solid #E2E8F0 !important;
-    box-shadow: 2px 0 15px rgba(0,0,0,0.03);
+    background-color: #1E293B !important;
+    border-right: 1px solid #334155 !important;
 }
-[data-testid="stSidebar"] p, [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] label, [data-testid="stSidebar"] h1,
-[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-    color: #0F172A !important; font-weight: 600;
+[data-testid="stSidebar"] * { color: #E2E8F0 !important; }
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stMultiSelect label,
+[data-testid="stSidebar"] .stSlider label,
+[data-testid="stSidebar"] .stRadio label { color: #94A3B8 !important; font-size: 12px; }
+
+/* ── Semua teks global ── */
+*, p, span, div, label, h1, h2, h3, h4, h5, h6 {
+    color: #E2E8F0 !important;
 }
-.metric-card {
-    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
-    border: 1px solid #E2E8F0; padding: 18px; border-radius: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-    text-align: center; transition: transform 0.3s ease;
-    height: 100%;
+
+/* ── Tab styling ── */
+.stTabs [data-baseweb="tab-list"] {
+    background-color: #1E293B !important;
+    border-radius: 10px; padding: 4px; gap: 4px;
 }
-.metric-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 10px 20px -5px rgba(37,99,235,0.15);
-    border-color: #BFDBFE;
-}
-.metric-title {
-    color: #64748B; font-size: 11px; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
-}
-.metric-value { color: #0F172A; font-size: 30px; font-weight: 900; line-height: 1; }
-.metric-value.blue  { color: #2563EB; }
-.metric-value.green { color: #10B981; }
-.metric-value.red   { color: #E11D48; }
-.metric-value.amber { color: #F59E0B; }
-.metric-sub { color: #94A3B8; font-size: 11px; margin-top: 5px; }
-.section-header {
-    font-size: 15px; font-weight: 800; color: #0F172A;
-    border-left: 4px solid #2563EB; padding-left: 12px;
-    margin: 18px 0 10px 0;
-}
-.insight-box {
-    background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
-    border: 1px solid #BFDBFE; border-radius: 12px;
-    padding: 14px 18px; margin: 8px 0;
-}
-.insight-box p { color: #1E40AF !important; font-size: 13px; margin: 0; }
-.stTabs [data-baseweb="tab-list"] { background-color: transparent; gap: 6px; }
 .stTabs [data-baseweb="tab"] {
-    background-color: #ffffff; border: 1px solid #E2E8F0;
-    border-radius: 8px 8px 0 0; padding: 10px 18px;
-    color: #64748B !important; font-weight: 600; font-size: 13px;
+    background-color: transparent !important;
+    border: 1px solid #334155 !important;
+    border-radius: 8px; padding: 8px 16px;
+    color: #94A3B8 !important; font-weight: 600; font-size: 12px;
 }
 .stTabs [aria-selected="true"] {
-    background-color: #2563EB !important; color: #ffffff !important;
-    border-color: #2563EB;
+    background-color: #3B82F6 !important;
+    color: #FFFFFF !important; border-color: #3B82F6 !important;
 }
-h1, h2, h3, h4 { color: #0F172A !important; font-weight: 800 !important; }
-p { color: #334155 !important; }
+
+/* ── Metric Cards ── */
+.metric-card {
+    background: linear-gradient(145deg, #1E293B, #0F172A);
+    border: 1px solid #334155; padding: 16px; border-radius: 14px;
+    text-align: center; transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+.metric-card:hover {
+    transform: translateY(-3px); border-color: #3B82F6;
+    box-shadow: 0 8px 25px rgba(59,130,246,0.2);
+}
+.metric-title {
+    color: #64748B !important; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px;
+}
+.metric-value { font-size: 28px; font-weight: 900; line-height: 1; }
+.metric-value.blue  { color: #60A5FA !important; }
+.metric-value.green { color: #34D399 !important; }
+.metric-value.red   { color: #F87171 !important; }
+.metric-value.amber { color: #FBBF24 !important; }
+.metric-value.white { color: #F1F5F9 !important; }
+.metric-sub { color: #64748B !important; font-size: 10px; margin-top: 4px; }
+
+/* ── Section Headers ── */
+.section-header {
+    font-size: 14px; font-weight: 800; color: #F1F5F9 !important;
+    border-left: 4px solid #3B82F6; padding-left: 12px;
+    margin: 16px 0 10px 0; letter-spacing: 0.3px;
+}
+
+/* ── Insight Boxes ── */
+.insight-box {
+    background: linear-gradient(135deg, #1E3A5F, #1E293B);
+    border: 1px solid #3B82F6; border-radius: 10px;
+    padding: 12px 16px; margin: 6px 0;
+}
+.insight-box p { color: #93C5FD !important; font-size: 12px; margin: 0; }
+
+/* ── AI Chat ── */
+.chat-container {
+    background: #1E293B; border: 1px solid #334155;
+    border-radius: 12px; padding: 16px; margin: 8px 0;
+    max-height: 400px; overflow-y: auto;
+}
+.chat-user {
+    background: #1D4ED8; border-radius: 12px 12px 4px 12px;
+    padding: 10px 14px; margin: 6px 0 6px auto;
+    max-width: 80%; text-align: right;
+    display: inline-block; float: right; clear: both;
+}
+.chat-user p { color: #DBEAFE !important; font-size: 13px; margin: 0; }
+.chat-ai {
+    background: #0F3460; border: 1px solid #1E40AF;
+    border-radius: 12px 12px 12px 4px;
+    padding: 10px 14px; margin: 6px 0;
+    max-width: 85%; display: inline-block; float: left; clear: both;
+}
+.chat-ai p { color: #BAE6FD !important; font-size: 13px; margin: 0; }
+.chat-clearfix { clear: both; }
+
+/* ── Dataframe dark ── */
+.stDataFrame { background: #1E293B !important; }
+[data-testid="stDataFrame"] { background: #1E293B !important; }
+
+/* ── Input fields ── */
+.stTextInput input, .stSelectbox select {
+    background: #1E293B !important; color: #E2E8F0 !important;
+    border: 1px solid #334155 !important; border-radius: 8px;
+}
+.stTextArea textarea {
+    background: #1E293B !important; color: #E2E8F0 !important;
+    border: 1px solid #334155 !important;
+}
+
+/* ── Buttons ── */
+.stButton button {
+    background: #1D4ED8 !important; color: #FFFFFF !important;
+    border: none !important; border-radius: 8px;
+    font-weight: 600; transition: all 0.2s;
+}
+.stButton button:hover {
+    background: #2563EB !important;
+    box-shadow: 0 4px 12px rgba(37,99,235,0.4);
+}
+
+/* ── Expander ── */
+.streamlit-expanderHeader {
+    background: #1E293B !important; color: #E2E8F0 !important;
+    border: 1px solid #334155 !important; border-radius: 8px;
+}
+
+/* ── Success/Info/Warning ── */
+.stSuccess { background: rgba(16,185,129,0.15) !important; border-color: #10B981 !important; }
+.stInfo    { background: rgba(59,130,246,0.15) !important; border-color: #3B82F6 !important; }
+.stWarning { background: rgba(245,158,11,0.15) !important; border-color: #F59E0B !important; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0F172A; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #475569; }
 </style>
 """, unsafe_allow_html=True)
 
-NPS_COLORS  = {'Promoter': '#10B981', 'Passive': '#F59E0B', 'Detractor': '#EF4444'}
-COLOR_XYZ   = '#2563EB'
-COLOR_KOMP  = '#E11D48'
-COLOR_IMPRT = '#94A3B8'
+# ── Warna konstanta ────────────────────────────────────────────────────
+NPS_COLORS  = {'Promoter':'#10B981','Passive':'#F59E0B','Detractor':'#EF4444'}
+COLOR_XYZ   = '#3B82F6'
+COLOR_KOMP  = '#F87171'
+COLOR_IMPRT = '#64748B'
+CHART_BG    = '#0F172A'
+CHART_PAPER = '#0F172A'
+GRID_COLOR  = '#1E293B'
 
-def fmt_card(title, value, color="", sub=""):
+def fmt_card(title, value, color="white", sub=""):
     return f"""<div class='metric-card'>
         <div class='metric-title'>{title}</div>
         <div class='metric-value {color}'>{value}</div>
@@ -101,24 +190,51 @@ def insight_box(text):
 
 def elite_layout(fig, title="", height=None):
     fig.update_layout(
-        title=dict(text=title, font=dict(size=14, color='#0F172A')),
-        template="plotly_white",
-        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=50, b=20, l=20, r=20),
-        font=dict(color='#334155', size=11),
-        hoverlabel=dict(bgcolor="#0F172A", font_color="#FFFFFF", font_size=12),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        title=dict(text=title, font=dict(size=13, color='#E2E8F0')),
+        template="plotly_dark",
+        plot_bgcolor=CHART_BG, paper_bgcolor=CHART_PAPER,
+        margin=dict(t=45, b=15, l=10, r=10),
+        font=dict(color='#CBD5E1', size=11),
+        hoverlabel=dict(bgcolor="#1E293B", font_color="#E2E8F0",
+                        font_size=12, bordercolor="#3B82F6"),
+        legend=dict(
+            font=dict(color="#CBD5E1"),
+            bgcolor="rgba(30,41,59,0.8)",
+            bordercolor="#334155",
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1
+        ),
         **({"height": height} if height else {})
     )
-    fig.update_xaxes(showgrid=True, gridcolor='#F1F5F9', zeroline=False, automargin=True)
-    fig.update_yaxes(showgrid=True, gridcolor='#F1F5F9', zeroline=False, automargin=True)
+    fig.update_xaxes(showgrid=True, gridcolor=GRID_COLOR, zeroline=False,
+                     automargin=True, tickfont=dict(color='#94A3B8'),
+                     title_font=dict(color='#94A3B8'))
+    fig.update_yaxes(showgrid=True, gridcolor=GRID_COLOR, zeroline=False,
+                     automargin=True, tickfont=dict(color='#94A3B8'),
+                     title_font=dict(color='#94A3B8'))
     return fig
 
-def short_label(col, col_map, max_len=40):
+def short_label(col, col_map, max_len=38):
     name = col_map.get(col, col)
     name = re.sub(r'\s*-\s*(XYZ|kompetitor)\s*$', '', name, flags=re.IGNORECASE)
     name = re.sub(r'\(.*?\)', '', name).strip()
+    name = re.sub(r'\s+', ' ', name)
     return name[:max_len] + "…" if len(name) > max_len else name
+
+# ── Parser komentar VoC ────────────────────────────────────────────────
+def parse_comment(raw):
+    """Ambil bagian akhir komentar yang paling spesifik."""
+    if pd.isna(raw) or str(raw).strip() in ['', 'None', 'nan']:
+        return None
+    parts = str(raw).split(';')
+    # Ambil item terakhir yang panjang > 5 karakter
+    for p in reversed(parts):
+        p = p.strip()
+        if len(p) > 5 and p not in ['NET', 'Subnet']:
+            return p
+    return parts[-1].strip()
+
+def clean_comments(series):
+    return series.apply(parse_comment).dropna()
 
 # =====================================================================
 # 2. LOAD DATA
@@ -137,302 +253,374 @@ except Exception as e:
     st.stop()
 
 # =====================================================================
-# 3. SIDEBAR — FILTER GLOBAL
+# 3. SIDEBAR
 # =====================================================================
-st.sidebar.markdown(
-    "<h3 style='color:#2563EB !important; font-weight:800;'>🎛️ Filter Analitik</h3>",
-    unsafe_allow_html=True
-)
-
-# ── Filter Kompetitor ─────────────────────────────────────────────────
-st.sidebar.markdown("**🏦 Benchmark Kompetitor**")
-komp_list   = sorted(df_raw['KOMP'].dropna().unique().tolist())
-target_komp = st.sidebar.selectbox(
-    "Pilih Kompetitor:",
-    ["Semua Kompetitor (Rata-rata)"] + komp_list,
-    help="Pilih bank kompetitor spesifik untuk perbandingan head-to-head"
-)
-
-st.sidebar.markdown("---")
-
-# ── Filter Lokasi (Cascading) ─────────────────────────────────────────
-st.sidebar.markdown("**📍 Filter Lokasi**")
-prov_opts = ["Semua"] + sorted(df_raw['PROV'].dropna().unique().tolist())
-sel_prov  = st.sidebar.multiselect("Provinsi", prov_opts[1:])
-
-kota_pool = df_raw[df_raw['PROV'].isin(sel_prov)] if sel_prov else df_raw
-kota_opts = sorted(kota_pool['KABKOTA'].dropna().unique().tolist())
-sel_kota  = st.sidebar.multiselect("Kab / Kota", kota_opts)
-
-cab_pool = kota_pool[kota_pool['KABKOTA'].isin(sel_kota)] if sel_kota else kota_pool
-cab_opts = sorted(cab_pool['CABANG'].dropna().unique().tolist())
-sel_cab  = st.sidebar.multiselect("Kantor Cabang", cab_opts)
-
-st.sidebar.markdown("---")
-
-# ── Filter Profil Responden ───────────────────────────────────────────
-with st.sidebar.expander("👤 Profil Responden", expanded=False):
-    sel_gender = st.multiselect(
-        "Jenis Kelamin",
-        sorted(df_raw['S1'].dropna().unique().tolist())
-    )
-    sel_usia = st.multiselect(
-        "Rentang Usia",
-        sorted(df_raw['S2_2'].dropna().unique().tolist())
-    )
-    sel_tenure = st.multiselect(
-        "Lama Menjadi Nasabah",
-        sorted(df_raw['S4'].dropna().unique().tolist())
-    )
-    sel_frekuensi = st.multiselect(
-        "Frekuensi Transaksi",
-        sorted(df_raw['S7'].dropna().unique().tolist())
-    )
-    sel_panel = st.multiselect(
-        "Panel (Teller/CS)",
-        sorted(df_raw['PANEL'].dropna().unique().tolist())
-    )
-    sel_sos = st.multiselect(
-        "Status Pernikahan",
-        sorted(df_raw['P1'].dropna().unique().tolist())
-    )
-    sel_pekerjaan = st.multiselect(
-        "Pekerjaan",
-        sorted(df_raw['P4'].dropna().unique().tolist())
-    )
-    sel_pendidikan = st.multiselect(
-        "Pendidikan Terakhir",
-        sorted(df_raw['P3'].dropna().unique().tolist())
+with st.sidebar:
+    st.markdown(
+        "<h3 style='color:#60A5FA !important; font-weight:800; "
+        "margin-bottom:16px;'>🎛️ Filter Analitik</h3>",
+        unsafe_allow_html=True
     )
 
-with st.sidebar.expander("🏦 Perilaku Perbankan", expanded=False):
-    sel_bank_utama = st.multiselect(
-        "Bank Utama Simpan Dana",
-        sorted(df_raw['A1B'].dropna().unique().tolist())
-    )
-    sel_bank_transaksi = st.multiselect(
-        "Bank Utama Transaksi",
-        sorted(df_raw['A1C'].dropna().unique().tolist())
-    )
-    sel_nps_cat = st.multiselect(
-        "Kategori NPS",
-        ['Promoter', 'Passive', 'Detractor']
+    # Kompetitor
+    st.markdown("**🏦 Benchmark Kompetitor**")
+    komp_list   = sorted(df_raw['KOMP'].dropna().unique().tolist())
+    target_komp = st.selectbox(
+        "Kompetitor:",
+        ["Semua Kompetitor (Rata-rata)"] + komp_list,
+        help="Pilih bank kompetitor spesifik"
     )
 
-# ── Apply Filter ──────────────────────────────────────────────────────
+    st.markdown("---")
+
+    # Lokasi Cascading
+    st.markdown("**📍 Lokasi**")
+    sel_prov = st.multiselect(
+        "Provinsi", sorted(df_raw['PROV'].dropna().unique())
+    )
+    kota_pool = df_raw[df_raw['PROV'].isin(sel_prov)] if sel_prov else df_raw
+    sel_kota  = st.multiselect(
+        "Kab/Kota", sorted(kota_pool['KABKOTA'].dropna().unique())
+    )
+    cab_pool  = kota_pool[kota_pool['KABKOTA'].isin(sel_kota)] if sel_kota else kota_pool
+    sel_cab   = st.multiselect(
+        "Cabang", sorted(cab_pool['CABANG'].dropna().unique())
+    )
+
+    st.markdown("---")
+
+    # Profil Responden
+    with st.expander("👤 Profil Responden", expanded=False):
+        sel_gender    = st.multiselect("Gender",
+            sorted(df_raw['S1'].dropna().unique()))
+        sel_usia      = st.multiselect("Rentang Usia",
+            sorted(df_raw['S2_2'].dropna().unique()))
+        sel_tenure    = st.multiselect("Lama Nasabah",
+            sorted(df_raw['S4'].dropna().unique()))
+        sel_frek      = st.multiselect("Frekuensi Transaksi",
+            sorted(df_raw['S7'].dropna().unique()))
+        sel_panel     = st.multiselect("Panel",
+            sorted(df_raw['PANEL'].dropna().unique()))
+        sel_pekerjaan = st.multiselect("Pekerjaan",
+            sorted(df_raw['P4'].dropna().unique()))
+        sel_pendidikan= st.multiselect("Pendidikan",
+            sorted(df_raw['P3'].dropna().unique()))
+        sel_p1        = st.multiselect("Status Nikah",
+            sorted(df_raw['P1'].dropna().unique()))
+
+    with st.expander("🏦 Perilaku Perbankan", expanded=False):
+        sel_bank_simpan = st.multiselect("Bank Utama Simpan",
+            sorted(df_raw['A1B'].dropna().unique()))
+        sel_bank_trans  = st.multiselect("Bank Utama Transaksi",
+            sorted(df_raw['A1C'].dropna().unique()))
+        sel_nps_cat     = st.multiselect("Kategori NPS",
+            ['Promoter','Passive','Detractor'])
+
+    with st.expander("🎯 Filter Skor", expanded=False):
+        nps_range = st.slider("Rentang NPS Score", 0, 10, (0, 10))
+        sat_range = st.slider("Rentang Kepuasan", 1, 6, (1, 6))
+        loy_range = st.slider("Rentang Loyalitas", 1, 6, (1, 6))
+
+    st.markdown("---")
+
+# ── Apply filter ──────────────────────────────────────────────────────
 df = df_raw.copy()
-if sel_prov:          df = df[df['PROV'].isin(sel_prov)]
-if sel_kota:          df = df[df['KABKOTA'].isin(sel_kota)]
-if sel_cab:           df = df[df['CABANG'].isin(sel_cab)]
-if sel_gender:        df = df[df['S1'].isin(sel_gender)]
-if sel_usia:          df = df[df['S2_2'].isin(sel_usia)]
-if sel_tenure:        df = df[df['S4'].isin(sel_tenure)]
-if sel_frekuensi:     df = df[df['S7'].isin(sel_frekuensi)]
-if sel_panel:         df = df[df['PANEL'].isin(sel_panel)]
-if sel_sos:           df = df[df['P1'].isin(sel_sos)]
-if sel_pekerjaan:     df = df[df['P4'].isin(sel_pekerjaan)]
-if sel_pendidikan:    df = df[df['P3'].isin(sel_pendidikan)]
-if sel_bank_utama:    df = df[df['A1B'].isin(sel_bank_utama)]
-if sel_bank_transaksi:df = df[df['A1C'].isin(sel_bank_transaksi)]
-if sel_nps_cat:       df = df[df['G1A_CAT'].isin(sel_nps_cat)]
+if sel_prov:         df = df[df['PROV'].isin(sel_prov)]
+if sel_kota:         df = df[df['KABKOTA'].isin(sel_kota)]
+if sel_cab:          df = df[df['CABANG'].isin(sel_cab)]
+if sel_gender:       df = df[df['S1'].isin(sel_gender)]
+if sel_usia:         df = df[df['S2_2'].isin(sel_usia)]
+if sel_tenure:       df = df[df['S4'].isin(sel_tenure)]
+if sel_frek:         df = df[df['S7'].isin(sel_frek)]
+if sel_panel:        df = df[df['PANEL'].isin(sel_panel)]
+if sel_pekerjaan:    df = df[df['P4'].isin(sel_pekerjaan)]
+if sel_pendidikan:   df = df[df['P3'].isin(sel_pendidikan)]
+if sel_p1:           df = df[df['P1'].isin(sel_p1)]
+if sel_bank_simpan:  df = df[df['A1B'].isin(sel_bank_simpan)]
+if sel_bank_trans:   df = df[df['A1C'].isin(sel_bank_trans)]
+if sel_nps_cat:      df = df[df['G1A_CAT'].isin(sel_nps_cat)]
+df = df[df['G1A'].between(nps_range[0], nps_range[1])]
+df = df[df['E1A'].between(sat_range[0], sat_range[1])]
+df = df[df['F1A'].between(loy_range[0], loy_range[1])]
 
-# Subset kompetitor
 df_komp     = df.copy() if target_komp == "Semua Kompetitor (Rata-rata)" \
               else df[df['KOMP'] == target_komp]
 df_has_komp = df_komp[df_komp['KOMP'].notna()]
 
-st.sidebar.markdown("---")
-st.sidebar.success(f"📊 Total Responden: **{len(df):,}**")
-st.sidebar.info(f"🏦 Resp. dgn Kompetitor: **{len(df_has_komp):,}**")
-if len(df) < 30:
-    st.sidebar.warning("⚠️ Sampel terlalu kecil, hasil mungkin tidak representatif.")
+with st.sidebar:
+    st.success(f"📊 Responden: **{len(df):,}**")
+    st.info(f"🏦 Dgn Kompetitor: **{len(df_has_komp):,}**")
+    if len(df) < 30:
+        st.warning("⚠️ Sampel < 30, hasil mungkin tidak representatif.")
 
 # ── Header ────────────────────────────────────────────────────────────
 st.markdown("""
-<h2 style='text-align:center; font-weight:900; letter-spacing:-1px;
-color:#0F172A !important; margin-bottom:20px;'>
-🏦 BANK XYZ — EXECUTIVE CX INTELLIGENCE DASHBOARD
-</h2>""", unsafe_allow_html=True)
+<div style='text-align:center; padding: 12px 0 20px 0;'>
+    <h1 style='font-weight:900; letter-spacing:-1px; color:#F1F5F9 !important;
+    font-size:26px; margin:0;'>
+    🏦 BANK XYZ — EXECUTIVE CX INTELLIGENCE DASHBOARD
+    </h1>
+    <p style='color:#64748B !important; font-size:12px; margin:4px 0 0 0;'>
+    Real-time Customer Experience Analytics Platform
+    </p>
+</div>""", unsafe_allow_html=True)
 
 if df.empty:
     st.warning("⚠️ Data kosong. Sesuaikan filter Anda.")
     st.stop()
 
 # =====================================================================
-# HELPER: Hitung NPS score
+# HELPERS
 # =====================================================================
 def calc_nps(series_cat):
     total = series_cat.notna().sum()
-    if total == 0:
-        return 0, 0, 0, 0
-    prom = (series_cat == 'Promoter').sum()
-    pasv = (series_cat == 'Passive').sum()
-    detr = (series_cat == 'Detractor').sum()
-    score = (prom - detr) / total * 100
-    return round(score, 1), round(prom/total*100, 1), round(pasv/total*100, 1), round(detr/total*100, 1)
+    if total == 0: return 0, 0, 0, 0
+    prom  = (series_cat=='Promoter').sum()
+    pasv  = (series_cat=='Passive').sum()
+    detr  = (series_cat=='Detractor').sum()
+    return round((prom-detr)/total*100,1), round(prom/total*100,1), \
+           round(pasv/total*100,1), round(detr/total*100,1)
 
-# =====================================================================
-# DIMENSI MAP — Mapping kolom per touchpoint
-# =====================================================================
-def get_dim_map(df):
+def get_dim_map(df_ref):
     return {
-        "Kantor Cabang (Fasilitas)": {
-            "imp":  [f"T_KC1_{i}" for i in range(1, 36) if f"T_KC1_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_KC2_") and
+        "Kantor Cabang": {
+            "imp":  [f"T_KC1_{i}" for i in range(1,36) if f"T_KC1_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_KC2_") and
                      c not in ["T_KC2_107","T_KC2_110","T_KC2_113","T_KC2_116",
                                 "T_KC2_108","T_KC2_111","T_KC2_114","T_KC2_117"] and
                      int(c.split("_")[-1]) % 3 == 2],
-            "komp": [c for c in df.columns if c.startswith("T_KC2_") and
+            "komp": [c for c in df_ref.columns if c.startswith("T_KC2_") and
                      c not in ["T_KC2_107","T_KC2_110","T_KC2_113","T_KC2_116",
                                 "T_KC2_108","T_KC2_111","T_KC2_114","T_KC2_117"] and
                      int(c.split("_")[-1]) % 3 == 0],
         },
         "Sekuriti": {
-            "imp":  [f"T_SC1_{i}" for i in range(1, 16) if f"T_SC1_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_SC2_") and
+            "imp":  [f"T_SC1_{i}" for i in range(1,16) if f"T_SC1_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_SC2_") and
                      c not in ["T_SC2_47","T_SC2_48"] and int(c.split("_")[-1]) % 3 == 2],
-            "komp": [c for c in df.columns if c.startswith("T_SC2_") and
+            "komp": [c for c in df_ref.columns if c.startswith("T_SC2_") and
                      c not in ["T_SC2_47","T_SC2_48"] and int(c.split("_")[-1]) % 3 == 0],
         },
         "Teller": {
-            "imp":  [f"T_TL2_{i}" for i in range(1, 20) if f"T_TL2_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_TL3_") and
+            "imp":  [f"T_TL2_{i}" for i in range(1,20) if f"T_TL2_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_TL3_") and
                      c not in ["T_TL3_59","T_TL3_60"] and int(c.split("_")[-1]) % 3 == 2],
-            "komp": [c for c in df.columns if c.startswith("T_TL3_") and
+            "komp": [c for c in df_ref.columns if c.startswith("T_TL3_") and
                      c not in ["T_TL3_59","T_TL3_60"] and int(c.split("_")[-1]) % 3 == 0],
         },
         "Customer Service": {
-            "imp":  [f"T_CS2_{i}" for i in range(1, 24) if f"T_CS2_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_CS3_") and
+            "imp":  [f"T_CS2_{i}" for i in range(1,24) if f"T_CS2_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_CS3_") and
                      c not in ["T_CS3_71","T_CS3_72"] and int(c.split("_")[-1]) % 3 == 2],
-            "komp": [c for c in df.columns if c.startswith("T_CS3_") and
+            "komp": [c for c in df_ref.columns if c.startswith("T_CS3_") and
                      c not in ["T_CS3_71","T_CS3_72"] and int(c.split("_")[-1]) % 3 == 0],
         },
         "Customer Advisor": {
-            "imp":  [f"T_CA1_{i}" for i in range(1, 20) if f"T_CA1_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_CA2_") and c != "T_CA2_20"],
+            "imp":  [f"T_CA1_{i}" for i in range(1,20) if f"T_CA1_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_CA2_") and c != "T_CA2_20"],
             "komp": [],
         },
         "ATM": {
-            "imp":  [f"T_AT2_{i}" for i in range(1, 19) if f"T_AT2_{i}" in df.columns],
-            "xyz":  [c for c in df.columns if c.startswith("T_AT3_") and
+            "imp":  [f"T_AT2_{i}" for i in range(1,19) if f"T_AT2_{i}" in df_ref.columns],
+            "xyz":  [c for c in df_ref.columns if c.startswith("T_AT3_") and
                      c not in ["T_AT3_56","T_AT3_57"] and int(c.split("_")[-1]) % 3 == 2],
-            "komp": [c for c in df.columns if c.startswith("T_AT3_") and
+            "komp": [c for c in df_ref.columns if c.startswith("T_AT3_") and
                      c not in ["T_AT3_56","T_AT3_57"] and int(c.split("_")[-1]) % 3 == 0],
         },
     }
 
 DIMENSI_MAP = get_dim_map(df_raw)
 
+stopwords_id = {
+    'yang','untuk','dengan','pada','dari','sebagai','tidak','karena','sangat',
+    'lebih','sudah','saya','bank','bisa','dan','di','ke','ini','itu','ada',
+    'juga','net','subnet','positive','negative','comments','dalam','oleh',
+    'akan','telah','dapat','kami','anda','nya','atau','jadi','baru','lagi',
+    'saat','pernah','masih','serta','yaitu','namun','jika','agar','bagi',
+    'atas','antara','setiap','para','mereka','kita','xyz','nasabah','layanan',
+    'cabang','rekening','lainnya','none','lain','sudah','belum','karena',
+    'baik','bagus','cukup','sudah','masih','sangat','sekali','paling','makin'
+}
+
+# =====================================================================
+# AI CHAT HELPER
+# =====================================================================
+def build_context(df_ctx, df_komp_ctx):
+    """Buat ringkasan konteks data untuk AI."""
+    nps_s, pp, _, pd_ = calc_nps(df_ctx['G1A_CAT'])
+    nps_k, pk, _, dk  = calc_nps(df_komp_ctx['G1C_CAT']) \
+                         if len(df_komp_ctx) > 0 else (0,0,0,0)
+    ovr_cols = [c for c in df_ctx.columns if c.startswith("OVR_") and "_XYZ" in c]
+    ovr_means = {c.replace("OVR_","").replace("_XYZ",""): round(df_ctx[c].mean(),2)
+                 for c in ovr_cols if c in df_ctx.columns}
+
+    top_cab_col = [c for c in df_ctx.columns if c.startswith("OVR_") and "_XYZ" in c
+                   and c not in ["OVR_KC_OPERASIONAL_XYZ","OVR_KC_PARKIR_XYZ",
+                                  "OVR_KC_BANKINGHALL_XYZ","OVR_KC_TOILET_XYZ"]]
+    cab_score = df_ctx.groupby('CABANG')[top_cab_col].mean().mean(axis=1) \
+                if top_cab_col else pd.Series(dtype=float)
+
+    top3  = cab_score.nlargest(3).index.tolist()  if len(cab_score) > 0 else []
+    bot3  = cab_score.nsmallest(3).index.tolist() if len(cab_score) > 0 else []
+
+    # Sample komentar Promoter & Detractor
+    prom_comments = clean_comments(
+        df_ctx[df_ctx['G1A_CAT']=='Promoter']['G1B']
+    ).head(5).tolist()
+    detr_comments = clean_comments(
+        df_ctx[df_ctx['G1A_CAT']=='Detractor']['G1B']
+    ).head(5).tolist()
+
+    ctx = f"""
+DATA RINGKASAN BANK XYZ (berdasarkan filter aktif):
+- Total responden: {len(df_ctx):,}
+- NPS Score XYZ: {nps_s} (Promoter {pp}%, Detractor {pd_}%)
+- NPS Score Kompetitor: {nps_k} (Promoter {pk}%, Detractor {dk}%)
+- Gap NPS: {round(nps_s - nps_k, 1)} poin
+- Kepuasan XYZ (1-6): {round(df_ctx['E1A'].mean(), 2)}
+- Loyalitas XYZ (1-6): {round(df_ctx['F1A'].mean(), 2)}
+- Skor per dimensi: {json.dumps(ovr_means)}
+- Top 3 cabang terbaik: {', '.join(top3)}
+- Bottom 3 cabang: {', '.join(bot3)}
+- Sample alasan Promoter: {prom_comments}
+- Sample alasan Detractor: {detr_comments}
+- Provinsi yang disurvei: {sorted(df_ctx['PROV'].dropna().unique().tolist())}
+- Kompetitor yang dibandingkan: {target_komp}
+"""
+    return ctx
+
+def call_claude_api(messages, context):
+    """Panggil Anthropic API."""
+    try:
+        system_prompt = f"""Kamu adalah analis CX (Customer Experience) senior yang ahli dalam data perbankan. 
+Kamu memiliki akses ke data survei kepuasan nasabah Bank XYZ. 
+Jawab pertanyaan dengan ringkas, insightful, dan actionable dalam Bahasa Indonesia.
+Gunakan data berikut sebagai konteks:
+
+{context}
+
+Berikan jawaban yang:
+1. Berdasarkan data yang ada
+2. Disertai angka spesifik
+3. Ada rekomendasi actionable
+4. Maksimal 3-4 paragraf pendek"""
+
+        payload = {
+            "model": "claude-sonnet-4-6",
+            "max_tokens": 1000,
+            "system": system_prompt,
+            "messages": messages
+        }
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"Content-Type": "application/json"},
+            json=payload,
+            timeout=30
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data['content'][0]['text']
+        else:
+            return f"Error API: {response.status_code}"
+    except Exception as e:
+        return f"Gagal menghubungi AI: {str(e)}"
+
 # =====================================================================
 # TABS
 # =====================================================================
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
-    "🌟 Executive Summary",
+tab1,tab2,tab3,tab4,tab5,tab6,tab7,tab8,tab9 = st.tabs([
+    "🌟 Executive",
     "🏢 Kinerja Layanan",
-    "🏆 Brand & Kompetitor",
-    "🎯 Touchpoint & IPA",
+    "🏆 Brand & Komp.",
+    "🎯 Touchpoint",
     "💡 Emosi & Loyalitas",
     "📱 Digitalisasi",
-    "👥 Profil & Segmentasi",
-    "💬 Voice of Customer"
+    "👥 Profil & Segmen",
+    "💬 Voice of Customer",
+    "🤖 AI Analyst"
 ])
 
 # =====================================================================
 # TAB 1 — EXECUTIVE SUMMARY
 # =====================================================================
 with tab1:
-    # ── KPI Cards ────────────────────────────────────────────────────
-    st.markdown("<div class='section-header'>📌 Indikator Utama</div>",
+    nps_score,pct_p,pct_pasv,pct_d = calc_nps(df['G1A_CAT'])
+    nps_k,pct_pk,pct_pasvk,pct_dk  = calc_nps(df_has_komp['G1C_CAT']) \
+                                       if len(df_has_komp)>0 else (0,0,0,0)
+    sat_xyz = df['E1A'].mean()
+    sat_kom = df_has_komp['E1B'].mean() if len(df_has_komp)>0 else np.nan
+    loy_xyz = df['F1A'].mean()
+    loy_kom = df_has_komp['F1B'].mean() if len(df_has_komp)>0 else np.nan
+    gap_nps = nps_score - nps_k
+
+    # ── KPI Row ───────────────────────────────────────────────────────
+    st.markdown("<div class='section-header'>📌 Key Performance Indicators</div>",
                 unsafe_allow_html=True)
-
-    nps_score, pct_prom, pct_pasv, pct_detr = calc_nps(df['G1A_CAT'])
-    nps_k, pct_pk, pct_pasv_k, pct_dk       = calc_nps(df_has_komp['G1C_CAT']) \
-                                                if len(df_has_komp) > 0 \
-                                                else (0, 0, 0, 0)
-    sat_xyz  = df['E1A'].mean()
-    sat_kom  = df_has_komp['E1B'].mean() if len(df_has_komp) > 0 else np.nan
-    loy_xyz  = df['F1A'].mean()
-    loy_kom  = df_has_komp['F1B'].mean() if len(df_has_komp) > 0 else np.nan
-
-    k1,k2,k3,k4,k5,k6,k7 = st.columns(7)
-    k1.markdown(fmt_card("NPS Score XYZ",     f"{nps_score:.0f}", "blue",
-        f"P:{pct_prom:.0f}% | D:{pct_detr:.0f}%"), unsafe_allow_html=True)
-    k2.markdown(fmt_card("NPS Kompetitor",    f"{nps_k:.0f}", "red",
-        f"P:{pct_pk:.0f}% | D:{pct_dk:.0f}%"), unsafe_allow_html=True)
-    k3.markdown(fmt_card("Gap NPS",
-        f"+{nps_score-nps_k:.0f}" if nps_score >= nps_k else f"{nps_score-nps_k:.0f}",
-        "green" if nps_score >= nps_k else "red",
-        "XYZ − Kompetitor"), unsafe_allow_html=True)
-    k4.markdown(fmt_card("Kepuasan XYZ",      f"{sat_xyz:.2f}", "blue", "Skala 1–6"),
+    k = st.columns(8)
+    k[0].markdown(fmt_card("NPS XYZ", f"{nps_score:.0f}", "blue",
+        f"P:{pct_p:.0f}% D:{pct_d:.0f}%"), unsafe_allow_html=True)
+    k[1].markdown(fmt_card("NPS Kompetitor", f"{nps_k:.0f}", "red",
+        f"P:{pct_pk:.0f}% D:{pct_dk:.0f}%"), unsafe_allow_html=True)
+    k[2].markdown(fmt_card("Gap NPS",
+        f"+{gap_nps:.0f}" if gap_nps>=0 else f"{gap_nps:.0f}",
+        "green" if gap_nps>=0 else "red", "XYZ − Komp"),
         unsafe_allow_html=True)
-    k5.markdown(fmt_card("Kepuasan Komp",
+    k[3].markdown(fmt_card("Kepuasan XYZ", f"{sat_xyz:.2f}", "blue", "Skala 1–6"),
+        unsafe_allow_html=True)
+    k[4].markdown(fmt_card("Kepuasan Komp",
         f"{sat_kom:.2f}" if not np.isnan(sat_kom) else "N/A", "red", "Skala 1–6"),
         unsafe_allow_html=True)
-    k6.markdown(fmt_card("Loyalitas XYZ",     f"{loy_xyz:.2f}", "green", "Skala 1–6"),
+    k[5].markdown(fmt_card("Loyalitas XYZ", f"{loy_xyz:.2f}", "green", "Skala 1–6"),
         unsafe_allow_html=True)
-    k7.markdown(fmt_card("Total Responden",   f"{len(df):,}", "amber",
-        f"{len(df_has_komp):,} dgn komp."), unsafe_allow_html=True)
+    k[6].markdown(fmt_card("Promoter XYZ", f"{pct_p:.0f}%", "green",
+        f"{int(df['G1A_CAT'].eq('Promoter').sum())} orang"), unsafe_allow_html=True)
+    k[7].markdown(fmt_card("Total Resp.", f"{len(df):,}", "white",
+        f"{len(df_has_komp):,} dgn komp"), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
     # ── Auto Insight ─────────────────────────────────────────────────
-    gap_nps = nps_score - nps_k
     if gap_nps > 50:
-        insight_box(f"Bank XYZ unggul sangat signifikan vs kompetitor dengan gap NPS {gap_nps:.0f} poin. "
-                    f"Promoter XYZ ({pct_prom:.0f}%) jauh lebih tinggi dari kompetitor ({pct_pk:.0f}%).")
+        insight_box(f"XYZ unggul sangat signifikan dengan gap NPS {gap_nps:.0f} poin. "
+                    f"Promoter XYZ ({pct_p:.0f}%) jauh lebih tinggi dari kompetitor ({pct_pk:.0f}%). "
+                    f"Pertahankan keunggulan di semua dimensi layanan.")
     elif gap_nps > 20:
-        insight_box(f"Bank XYZ unggul {gap_nps:.0f} poin NPS di atas kompetitor. "
-                    f"Pertahankan keunggulan terutama di area dengan gap terbesar.")
+        insight_box(f"XYZ unggul {gap_nps:.0f} poin NPS di atas kompetitor. "
+                    f"Fokus pada dimensi dengan gap terkecil untuk memperlebar keunggulan.")
     else:
-        insight_box(f"Gap NPS XYZ vs kompetitor hanya {gap_nps:.0f} poin. "
-                    f"Perlu perhatian lebih untuk memperlebar keunggulan kompetitif.")
+        insight_box(f"Gap NPS XYZ vs kompetitor hanya {gap_nps:.0f} poin — persaingan ketat. "
+                    f"Perlu strategi diferensiasi yang lebih kuat di touchpoint utama.")
 
-    # ── Baris 2: Donut NPS + Scorecard ───────────────────────────────
-    r2c1, r2c2 = st.columns([1, 2.2])
+    # ── Row 2: Donut + Scorecard ──────────────────────────────────────
+    r2a, r2b = st.columns([1, 2.3])
 
-    with r2c1:
-        st.markdown("<div class='section-header'>Komposisi NPS XYZ</div>",
+    with r2a:
+        st.markdown("<div class='section-header'>NPS Composition</div>",
                     unsafe_allow_html=True)
-        nps_comp = df['G1A_CAT'].value_counts().reset_index()
-        nps_comp.columns = ['Kategori','Jumlah']
-        fig_donut = px.pie(nps_comp, values='Jumlah', names='Kategori',
-            hole=0.6, color='Kategori', color_discrete_map=NPS_COLORS)
-        fig_donut.update_traces(
-            textposition='outside', textinfo='percent+label',
-            marker=dict(line=dict(color='#FFFFFF', width=2))
-        )
-        fig_donut.add_annotation(
-            text=f"NPS<br><b>{nps_score:.0f}</b>",
-            x=0.5, y=0.5, showarrow=False,
-            font=dict(size=18, color='#0F172A')
-        )
-        st.plotly_chart(elite_layout(fig_donut), use_container_width=True)
+        for cat_data, title_d, nps_val in [
+            (df['G1A_CAT'], "Bank XYZ", nps_score),
+            (df_has_komp['G1C_CAT'] if len(df_has_komp)>0 else pd.Series(dtype=str),
+             target_komp, nps_k)
+        ]:
+            if len(cat_data) > 0:
+                comp = cat_data.value_counts().reset_index()
+                comp.columns = ['Kategori','Jumlah']
+                fig_d = px.pie(comp, values='Jumlah', names='Kategori', hole=0.62,
+                    color='Kategori', color_discrete_map=NPS_COLORS)
+                fig_d.update_traces(
+                    textposition='outside', textinfo='percent+label',
+                    marker=dict(line=dict(color='#0F172A', width=2))
+                )
+                fig_d.add_annotation(text=f"{title_d}<br><b>{nps_val:.0f}</b>",
+                    x=0.5, y=0.5, showarrow=False,
+                    font=dict(size=13, color='#E2E8F0'))
+                fig_d.update_layout(height=220, margin=dict(t=30,b=10,l=0,r=0))
+                st.plotly_chart(elite_layout(fig_d), use_container_width=True)
 
-        # NPS Kompetitor mini donut
-        if len(df_has_komp) > 0:
-            nps_comp_k = df_has_komp['G1C_CAT'].value_counts().reset_index()
-            nps_comp_k.columns = ['Kategori','Jumlah']
-            fig_donut_k = px.pie(nps_comp_k, values='Jumlah', names='Kategori',
-                hole=0.6, color='Kategori', color_discrete_map=NPS_COLORS)
-            fig_donut_k.update_traces(
-                textposition='outside', textinfo='percent+label',
-                marker=dict(line=dict(color='#FFFFFF', width=2))
-            )
-            fig_donut_k.add_annotation(
-                text=f"NPS Komp<br><b>{nps_k:.0f}</b>",
-                x=0.5, y=0.5, showarrow=False,
-                font=dict(size=14, color='#0F172A')
-            )
-            st.plotly_chart(
-                elite_layout(fig_donut_k, f"NPS {target_komp}"),
-                use_container_width=True
-            )
-
-    with r2c2:
-        st.markdown("<div class='section-header'>Scorecard Dimensi: XYZ vs Kompetitor</div>",
+    with r2b:
+        st.markdown("<div class='section-header'>Scorecard Dimensi XYZ vs Kompetitor</div>",
                     unsafe_allow_html=True)
-        scorecard_data = [
+        sc_rows = [
             ("Kantor Cabang",    "OVR_KC_XYZ",           "OVR_KC_KOM"),
             ("  ↳ Operasional",  "OVR_KC_OPERASIONAL_XYZ","OVR_KC_OPERASIONAL_KOM"),
             ("  ↳ Parkir",       "OVR_KC_PARKIR_XYZ",    "OVR_KC_PARKIR_KOM"),
@@ -445,263 +633,206 @@ with tab1:
             ("Sarana Elektronik","OVR_SARANA_XYZ",       None),
             ("ATM",              "OVR_ATM_XYZ",          "OVR_ATM_KOM"),
         ]
-        rows = []
-        for label, col_xyz, col_kom in scorecard_data:
-            xyz_val = df[col_xyz].mean() if col_xyz in df.columns else np.nan
-            kom_val = df_has_komp[col_kom].mean() \
-                if col_kom and col_kom in df_has_komp.columns and len(df_has_komp) > 0 \
-                else np.nan
-            gap = xyz_val - kom_val if not (np.isnan(xyz_val) or np.isnan(kom_val)) else np.nan
-            rows.append({
-                "Dimensi":       label,
-                "XYZ":           round(xyz_val, 2),
-                "Kompetitor":    round(kom_val, 2) if not np.isnan(kom_val) else None,
-                "Gap":           round(gap, 2) if not np.isnan(gap) else None
-            })
-        sc_df = pd.DataFrame(rows)
+        sc_data = []
+        for label, cx, ck in sc_rows:
+            xv = df[cx].mean() if cx in df.columns else np.nan
+            kv = df_has_komp[ck].mean() if ck and ck in df_has_komp.columns \
+                 and len(df_has_komp)>0 else np.nan
+            gp = xv - kv if not (np.isnan(xv) or np.isnan(kv)) else np.nan
+            sc_data.append({"Dimensi":label,"XYZ":round(xv,2),
+                "Kompetitor":round(kv,2) if not np.isnan(kv) else None,
+                "Gap":round(gp,2) if not np.isnan(gp) else None})
+        sc_df = pd.DataFrame(sc_data)
 
         fig_sc = go.Figure()
-        fig_sc.add_trace(go.Bar(
-            name='Bank XYZ', y=sc_df['Dimensi'], x=sc_df['XYZ'],
+        fig_sc.add_trace(go.Bar(name='Bank XYZ', y=sc_df['Dimensi'], x=sc_df['XYZ'],
             orientation='h', marker_color=COLOR_XYZ,
-            text=sc_df['XYZ'], texttemplate='%{x:.2f}', textposition='outside'
-        ))
-        fig_sc.add_trace(go.Bar(
-            name='Kompetitor', y=sc_df['Dimensi'],
+            text=sc_df['XYZ'], texttemplate='%{x:.2f}', textposition='outside'))
+        fig_sc.add_trace(go.Bar(name='Kompetitor', y=sc_df['Dimensi'],
             x=pd.to_numeric(sc_df['Kompetitor'], errors='coerce'),
-            orientation='h', marker_color=COLOR_KOMP, opacity=0.85,
-            text=sc_df['Kompetitor'], texttemplate='%{x}', textposition='outside'
-        ))
-        fig_sc.update_layout(barmode='group', xaxis_range=[4, 6.5], height=420)
+            orientation='h', marker_color=COLOR_KOMP, opacity=0.8,
+            text=sc_df['Kompetitor'], texttemplate='%{x}', textposition='outside'))
+        fig_sc.update_layout(barmode='group', xaxis_range=[4,6.6], height=400)
         st.plotly_chart(elite_layout(fig_sc), use_container_width=True)
 
-    # ── Baris 3: Top/Bottom + Korelasi ───────────────────────────────
-    r3c1, r3c2 = st.columns(2)
+    # ── Row 3: Top/Bottom + Korelasi ─────────────────────────────────
+    r3a, r3b = st.columns(2)
 
-    with r3c1:
-        st.markdown("<div class='section-header'>🏆 Top & Bottom 5 Cabang</div>",
+    with r3a:
+        st.markdown("<div class='section-header'>🏆 Top & Bottom Cabang</div>",
                     unsafe_allow_html=True)
-        ovr_xyz_cols = [c for c in df.columns if c.startswith("OVR_") and "_XYZ" in c
-                        and c not in ["OVR_KC_OPERASIONAL_XYZ","OVR_KC_PARKIR_XYZ",
-                                      "OVR_KC_BANKINGHALL_XYZ","OVR_KC_TOILET_XYZ"]]
-        if ovr_xyz_cols:
-            cab_score = df.groupby('CABANG')[ovr_xyz_cols].mean().mean(axis=1).reset_index()
-            cab_score.columns = ['CABANG','Skor']
-            top5    = cab_score.nlargest(5,'Skor').assign(Status='🌟 Top 5')
-            bottom5 = cab_score.nsmallest(5,'Skor').assign(Status='⚠️ Bottom 5')
-            tb_df   = pd.concat([top5, bottom5])
-            fig_tb  = px.bar(tb_df, x='Skor', y='CABANG', color='Status',
-                orientation='h', text='Skor',
-                color_discrete_map={'🌟 Top 5': COLOR_XYZ, '⚠️ Bottom 5': COLOR_KOMP})
+        ovr_main = [c for c in df.columns if c.startswith("OVR_") and "_XYZ" in c
+                    and c not in ["OVR_KC_OPERASIONAL_XYZ","OVR_KC_PARKIR_XYZ",
+                                   "OVR_KC_BANKINGHALL_XYZ","OVR_KC_TOILET_XYZ"]]
+        if ovr_main:
+            cs = df.groupby('CABANG')[ovr_main].mean().mean(axis=1).reset_index()
+            cs.columns = ['CABANG','Skor']
+            tb = pd.concat([
+                cs.nlargest(5,'Skor').assign(Status='🌟 Top 5'),
+                cs.nsmallest(5,'Skor').assign(Status='⚠️ Bottom 5')
+            ])
+            fig_tb = px.bar(tb, x='Skor', y='CABANG', color='Status', orientation='h',
+                text='Skor',
+                color_discrete_map={'🌟 Top 5':COLOR_XYZ,'⚠️ Bottom 5':COLOR_KOMP})
             fig_tb.update_traces(texttemplate='%{x:.2f}', textposition='outside')
-            fig_tb.update_xaxes(range=[4.5, 6.3])
-            st.plotly_chart(elite_layout(fig_tb), use_container_width=True)
+            fig_tb.update_xaxes(range=[4.5,6.4])
+            st.plotly_chart(elite_layout(fig_tb, height=380), use_container_width=True)
 
-    with r3c2:
-        st.markdown("<div class='section-header'>📊 Korelasi Indikator Utama</div>",
+    with r3b:
+        st.markdown("<div class='section-header'>📊 Matriks Korelasi</div>",
                     unsafe_allow_html=True)
-        corr_map = {
-            'NPS': 'G1A', 'Kepuasan': 'E1A', 'Loyalitas': 'F1A',
-            'Teller': 'OVR_TELLER_XYZ', 'CS': 'OVR_CS_XYZ',
-            'ATM': 'OVR_ATM_XYZ', 'Sekuriti': 'OVR_SEKURITI_XYZ',
-            'KC': 'OVR_KC_XYZ'
-        }
-        valid_map = {k: v for k, v in corr_map.items() if v in df.columns}
-        corr_df  = df[list(valid_map.values())].copy()
-        corr_df.columns = list(valid_map.keys())
-        fig_corr = px.imshow(corr_df.corr(), text_auto=".2f",
+        corr_map = {'NPS':'G1A','Kepuasan':'E1A','Loyalitas':'F1A',
+                    'Teller':'OVR_TELLER_XYZ','CS':'OVR_CS_XYZ',
+                    'ATM':'OVR_ATM_XYZ','Sekuriti':'OVR_SEKURITI_XYZ',
+                    'Kantor Cabang':'OVR_KC_XYZ'}
+        valid = {k:v for k,v in corr_map.items() if v in df.columns}
+        cdf   = df[list(valid.values())].copy()
+        cdf.columns = list(valid.keys())
+        fig_c = px.imshow(cdf.corr(), text_auto=".2f",
             color_continuous_scale='RdBu', aspect='auto', zmin=-1, zmax=1)
-        st.plotly_chart(elite_layout(fig_corr, height=380), use_container_width=True)
+        st.plotly_chart(elite_layout(fig_c, height=380), use_container_width=True)
 
-    # ── Baris 4: NPS Trend per Provinsi ──────────────────────────────
-    st.markdown("<div class='section-header'>🗺️ Distribusi NPS per Provinsi</div>",
+    # ── Row 4: NPS per Provinsi ───────────────────────────────────────
+    st.markdown("<div class='section-header'>🗺️ NPS per Provinsi</div>",
                 unsafe_allow_html=True)
     prov_nps = df.groupby('PROV').agg(
-        NPS_Mean=('G1A','mean'),
-        Kepuasan=('E1A','mean'),
-        Loyalitas=('F1A','mean'),
-        Count=('SERIAL','count')
-    ).reset_index().sort_values('NPS_Mean', ascending=True)
+        NPS=('G1A','mean'), Kepuasan=('E1A','mean'),
+        Loyalitas=('F1A','mean'), Count=('SERIAL','count')
+    ).reset_index().sort_values('NPS', ascending=True)
 
-    fig_prov = px.bar(prov_nps, x='NPS_Mean', y='PROV', orientation='h',
-        color='NPS_Mean', color_continuous_scale='Blues',
-        text='NPS_Mean', hover_data=['Kepuasan','Loyalitas','Count'])
+    fig_prov = px.bar(prov_nps, x='NPS', y='PROV', orientation='h',
+        color='NPS', color_continuous_scale='Blues',
+        text='NPS', hover_data=['Kepuasan','Loyalitas','Count'])
     fig_prov.update_traces(texttemplate='%{x:.1f}', textposition='outside')
-    fig_prov.update_xaxes(range=[7, 10.5])
-    st.plotly_chart(elite_layout(fig_prov, "Rata-rata Skor NPS per Provinsi",
-        height=400), use_container_width=True)
+    fig_prov.update_xaxes(range=[7,10.5])
+    st.plotly_chart(elite_layout(fig_prov, "Rata-rata NPS per Provinsi", height=400),
+        use_container_width=True)
 
 # =====================================================================
-# TAB 2 — KINERJA LAYANAN CABANG
+# TAB 2 — KINERJA LAYANAN
 # =====================================================================
 with tab2:
-    # ── Heatmap cabang ────────────────────────────────────────────────
+    # ── Heatmap ───────────────────────────────────────────────────────
     st.markdown("<div class='section-header'>🔥 Heatmap Kinerja Cabang</div>",
                 unsafe_allow_html=True)
+    hm_c1, hm_c2 = st.columns([2,1])
+    with hm_c1:
+        ovr_all = [c for c in df.columns if c.startswith("OVR_") and "_XYZ" in c]
+        ovr_lbl = {c: c.replace("OVR_","").replace("_XYZ","").replace("_"," ").title()
+                   for c in ovr_all}
+        sel_hm  = st.multiselect("Dimensi heatmap:", list(ovr_lbl.keys()),
+            default=ovr_all, format_func=lambda x: ovr_lbl[x])
+    with hm_c2:
+        min_resp_hm = st.slider("Min. responden per cabang:", 3, 30, 8)
+        sort_hm     = st.selectbox("Urutkan berdasarkan:",
+            ["Rata-rata keseluruhan"] + [ovr_lbl[c] for c in sel_hm if c in ovr_lbl])
 
-    # Filter heatmap
-    hm_col1, hm_col2 = st.columns([2,1])
-    with hm_col1:
-        ovr_xyz_all = [c for c in df.columns if c.startswith("OVR_") and "_XYZ" in c]
-        ovr_labels  = {c: c.replace("OVR_","").replace("_XYZ","").replace("_"," ").title()
-                       for c in ovr_xyz_all}
-        sel_hm_dims = st.multiselect(
-            "Pilih dimensi untuk heatmap:",
-            options=list(ovr_labels.keys()),
-            default=ovr_xyz_all,
-            format_func=lambda x: ovr_labels[x]
-        )
-    with hm_col2:
-        min_resp = st.slider("Min. responden per cabang:", 5, 30, 10)
+    if sel_hm:
+        hm_filtered = df.groupby('CABANG').filter(lambda x: len(x) >= min_resp_hm)
+        hm_data     = hm_filtered.groupby('CABANG')[sel_hm].mean().round(2)
+        hm_data.columns = [ovr_lbl[c] for c in hm_data.columns]
 
-    if sel_hm_dims:
-        hm_df = df.groupby('CABANG').filter(lambda x: len(x) >= min_resp)
-        hm_df = hm_df.groupby('CABANG')[sel_hm_dims].mean().round(2)
-        hm_df.columns = [ovr_labels[c] for c in hm_df.columns]
-        # Sort by rata-rata skor
-        hm_df = hm_df.loc[hm_df.mean(axis=1).sort_values(ascending=False).index]
+        if sort_hm == "Rata-rata keseluruhan":
+            hm_data = hm_data.loc[hm_data.mean(axis=1).sort_values(ascending=False).index]
+        elif sort_hm in hm_data.columns:
+            hm_data = hm_data.sort_values(sort_hm, ascending=False)
 
-        fig_heat = px.imshow(
-            hm_df, text_auto=".2f",
-            color_continuous_scale='RdYlGn',
-            aspect='auto', zmin=4, zmax=6
-        )
-        fig_heat.update_layout(height=max(400, len(hm_df) * 22))
-        st.plotly_chart(elite_layout(fig_heat,
+        fig_hm = px.imshow(hm_data, text_auto=".2f",
+            color_continuous_scale='RdYlGn', aspect='auto', zmin=4, zmax=6)
+        fig_hm.update_layout(height=max(400, len(hm_data) * 20))
+        st.plotly_chart(elite_layout(fig_hm,
             "Heatmap Skor OVR per Cabang (Merah=Rendah, Hijau=Tinggi)"),
             use_container_width=True)
 
-        # Auto insight heatmap
-        worst_cab = hm_df.mean(axis=1).idxmin()
-        best_cab  = hm_df.mean(axis=1).idxmax()
-        insight_box(
-            f"Cabang dengan performa terbaik: **{best_cab}** "
-            f"(rata-rata {hm_df.loc[best_cab].mean():.2f}). "
-            f"Cabang yang perlu perhatian: **{worst_cab}** "
-            f"(rata-rata {hm_df.loc[worst_cab].mean():.2f})."
-        )
+        if len(hm_data) > 0:
+            wb = hm_data.mean(axis=1).idxmax()
+            ww = hm_data.mean(axis=1).idxmin()
+            insight_box(
+                f"Performa terbaik: **{wb}** (avg {hm_data.loc[wb].mean():.2f}). "
+                f"Perlu perhatian: **{ww}** (avg {hm_data.loc[ww].mean():.2f}). "
+                f"Gap antara best & worst: {hm_data.loc[wb].mean()-hm_data.loc[ww].mean():.2f} poin."
+            )
 
     st.markdown("---")
 
-    # ── Drill-down item level ─────────────────────────────────────────
+    # ── Drill-down ────────────────────────────────────────────────────
     st.markdown("<div class='section-header'>🔍 Drill-Down Item Level</div>",
                 unsafe_allow_html=True)
+    dc1, dc2, dc3 = st.columns(3)
+    with dc1: sel_dim = st.selectbox("Dimensi:", list(DIMENSI_MAP.keys()))
+    with dc2: drill_mode = st.radio("Tampilan:",["Bar Chart","Scatter IPA"],horizontal=True)
+    with dc3:
+        sel_cab_drill = st.selectbox("Filter Cabang:",
+            ["Semua"] + sorted(df['CABANG'].dropna().unique().tolist()))
 
-    dd_c1, dd_c2, dd_c3 = st.columns(3)
-    with dd_c1:
-        sel_dim = st.selectbox("Dimensi:", list(DIMENSI_MAP.keys()))
-    with dd_c2:
-        drill_mode = st.radio("Tampilan:", ["Bar Chart", "Scatter IPA"], horizontal=True)
-    with dd_c3:
-        sel_cabang_drill = st.selectbox(
-            "Filter Cabang (opsional):",
-            ["Semua"] + sorted(df['CABANG'].dropna().unique().tolist())
-        )
+    df_dr   = df if sel_cab_drill=="Semua" else df[df['CABANG']==sel_cab_drill]
+    df_dr_k = df_has_komp if sel_cab_drill=="Semua" \
+              else df_has_komp[df_has_komp['CABANG']==sel_cab_drill]
 
-    df_drill = df if sel_cabang_drill == "Semua" \
-               else df[df['CABANG'] == sel_cabang_drill]
-    df_drill_komp = df_has_komp if sel_cabang_drill == "Semua" \
-                    else df_has_komp[df_has_komp['CABANG'] == sel_cabang_drill]
+    di      = DIMENSI_MAP[sel_dim]
+    ic      = [c for c in di["imp"]  if c in df_dr.columns]
+    xc      = [c for c in di["xyz"]  if c in df_dr.columns]
+    kc      = [c for c in di["komp"] if c in df_dr_k.columns]
+    mn      = min(len(ic), len(xc))
 
-    dim_info  = DIMENSI_MAP[sel_dim]
-    imp_cols  = [c for c in dim_info["imp"]  if c in df_drill.columns]
-    xyz_cols  = [c for c in dim_info["xyz"]  if c in df_drill.columns]
-    komp_cols = [c for c in dim_info["komp"] if c in df_drill_komp.columns]
-    min_len   = min(len(imp_cols), len(xyz_cols))
-
-    if min_len > 0:
-        labels   = [short_label(c, col_map) for c in imp_cols[:min_len]]
-        imp_vals = [df_drill[c].mean()  for c in imp_cols[:min_len]]
-        xyz_vals = [df_drill[c].mean()  for c in xyz_cols[:min_len]]
-        kom_vals = [df_drill_komp[c].mean() if c in df_drill_komp.columns else np.nan
-                    for c in komp_cols[:min_len]] if komp_cols else []
+    if mn > 0:
+        lbs  = [short_label(c, col_map) for c in ic[:mn]]
+        iv   = [df_dr[c].mean()  for c in ic[:mn]]
+        xv   = [df_dr[c].mean()  for c in xc[:mn]]
+        kv   = [df_dr_k[c].mean() if c in df_dr_k.columns else np.nan
+                for c in kc[:mn]] if kc else []
 
         if drill_mode == "Bar Chart":
-            dc1, dc2 = st.columns([2.5, 1])
-            with dc1:
+            dd1, dd2 = st.columns([2.5,1])
+            with dd1:
                 fig_dd = go.Figure()
-                fig_dd.add_trace(go.Bar(
-                    name='Importance', x=imp_vals, y=labels,
-                    orientation='h', marker_color=COLOR_IMPRT, opacity=0.6
-                ))
-                fig_dd.add_trace(go.Bar(
-                    name='Satisfaction XYZ', x=xyz_vals, y=labels,
-                    orientation='h', marker_color=COLOR_XYZ
-                ))
-                if kom_vals:
-                    fig_dd.add_trace(go.Bar(
-                        name=f'Satisfaction {target_komp}',
-                        x=kom_vals, y=labels,
-                        orientation='h', marker_color=COLOR_KOMP, opacity=0.8
-                    ))
-                fig_dd.update_layout(barmode='group', xaxis_range=[3, 6.5],
-                                     height=max(350, min_len * 28))
-                st.plotly_chart(elite_layout(fig_dd,
-                    f"Importance vs Satisfaction — {sel_dim}"),
+                fig_dd.add_trace(go.Bar(name='Importance', x=iv, y=lbs,
+                    orientation='h', marker_color=COLOR_IMPRT, opacity=0.65))
+                fig_dd.add_trace(go.Bar(name='Sat. XYZ', x=xv, y=lbs,
+                    orientation='h', marker_color=COLOR_XYZ))
+                if kv:
+                    fig_dd.add_trace(go.Bar(name=f'Sat. {target_komp}', x=kv, y=lbs,
+                        orientation='h', marker_color=COLOR_KOMP, opacity=0.8))
+                fig_dd.update_layout(barmode='group', xaxis_range=[3,6.6],
+                    height=max(350, mn*26))
+                st.plotly_chart(elite_layout(fig_dd,f"Importance vs Satisfaction — {sel_dim}"),
                     use_container_width=True)
-
-            with dc2:
-                gap_sat_imp = pd.DataFrame({
-                    'Item': labels,
-                    'Gap (Sat−Imp)': [x - i for x, i in zip(xyz_vals, imp_vals)]
-                }).sort_values('Gap (Sat−Imp)')
-                gap_sat_imp['Warna'] = np.where(
-                    gap_sat_imp['Gap (Sat−Imp)'] < 0, COLOR_KOMP, COLOR_XYZ
-                )
-                fig_g = px.bar(gap_sat_imp, x='Gap (Sat−Imp)', y='Item',
-                    orientation='h', text='Gap (Sat−Imp)')
-                fig_g.update_traces(
-                    marker_color=gap_sat_imp['Warna'],
-                    texttemplate='%{x:.2f}', textposition='outside'
-                )
-                fig_g.update_layout(height=max(350, min_len * 28))
-                st.plotly_chart(elite_layout(fig_g, "Gap: Satisfaction − Importance"),
+            with dd2:
+                gdf = pd.DataFrame({'Item':lbs,
+                    'Gap':[x-i for x,i in zip(xv,iv)]}).sort_values('Gap')
+                gdf['Warna'] = np.where(gdf['Gap']<0, COLOR_KOMP, COLOR_XYZ)
+                fig_g = px.bar(gdf, x='Gap', y='Item', orientation='h', text='Gap')
+                fig_g.update_traces(marker_color=gdf['Warna'],
+                    texttemplate='%{x:.2f}', textposition='outside')
+                fig_g.update_layout(height=max(350, mn*26))
+                st.plotly_chart(elite_layout(fig_g, "Gap: Sat − Imp"),
                     use_container_width=True)
-
-                # Auto insight
-                worst_item = gap_sat_imp.iloc[0]
-                if worst_item['Gap (Sat−Imp)'] < 0:
-                    insight_box(
-                        f"Item paling kritis pada {sel_dim}: "
-                        f"**{worst_item['Item']}** (gap {worst_item['Gap (Sat−Imp)']:.2f}). "
-                        f"Importance tinggi tapi satisfaction masih di bawah harapan."
-                    )
-
-        else:  # Scatter IPA
-            ipa_df = pd.DataFrame({
-                'Item': labels,
-                'Importance': imp_vals,
-                'Satisfaction': xyz_vals
-            })
-            m_i, m_s = np.nanmean(imp_vals), np.nanmean(xyz_vals)
-            fig_ipa = px.scatter(ipa_df, x='Satisfaction', y='Importance',
-                text='Item', color_discrete_sequence=[COLOR_XYZ])
-            if kom_vals:
-                fig_ipa.add_trace(go.Scatter(
-                    x=kom_vals, y=imp_vals, mode='markers', name=target_komp,
-                    marker=dict(size=10, symbol='x', color=COLOR_KOMP,
-                                line=dict(width=2))
-                ))
-            fig_ipa.update_traces(
-                marker=dict(size=12), textposition='top center',
-                selector=dict(mode='markers+text')
-            )
-            fig_ipa.add_vline(x=m_s, line_dash="dash", line_color="#94A3B8")
-            fig_ipa.add_hline(y=m_i, line_dash="dash", line_color="#94A3B8")
-            for ann_x, ann_y, text, color in [
-                (ipa_df['Satisfaction'].min(), ipa_df['Importance'].max(),
-                 "⚠️ PERBAIKI SEGERA", COLOR_KOMP),
-                (ipa_df['Satisfaction'].max(), ipa_df['Importance'].max(),
-                 "🌟 PERTAHANKAN", "#10B981"),
-                (ipa_df['Satisfaction'].min(), ipa_df['Importance'].min(),
-                 "💤 PRIORITAS RENDAH", "#94A3B8"),
-                (ipa_df['Satisfaction'].max(), ipa_df['Importance'].min(),
-                 "✅ BERLEBIHAN", "#F59E0B"),
-            ]:
-                fig_ipa.add_annotation(x=ann_x, y=ann_y, text=text,
-                    showarrow=False, font=dict(color=color, size=10),
-                    bgcolor="rgba(255,255,255,0.85)")
-            fig_ipa.update_layout(height=500)
+                worst = gdf.iloc[0]
+                if worst['Gap'] < 0:
+                    insight_box(f"Item paling kritis: **{worst['Item']}** "
+                                f"(gap {worst['Gap']:.2f}). High importance, low satisfaction.")
+        else:
+            idf = pd.DataFrame({'Item':lbs,'Importance':iv,'Satisfaction':xv})
+            mi, ms = np.nanmean(iv), np.nanmean(xv)
+            def q_label(r):
+                if r['Importance']>=mi and r['Satisfaction']<ms: return "⚠️ Perbaiki"
+                elif r['Importance']>=mi and r['Satisfaction']>=ms: return "🌟 Pertahankan"
+                elif r['Importance']<mi and r['Satisfaction']<ms: return "💤 Rendah"
+                else: return "✅ Berlebihan"
+            idf['Kuadran'] = idf.apply(q_label, axis=1)
+            qc = {"⚠️ Perbaiki":COLOR_KOMP,"🌟 Pertahankan":"#34D399",
+                  "💤 Rendah":COLOR_IMPRT,"✅ Berlebihan":"#FBBF24"}
+            fig_ipa = px.scatter(idf, x='Satisfaction', y='Importance',
+                text='Item', color='Kuadran', color_discrete_map=qc)
+            if kv:
+                fig_ipa.add_trace(go.Scatter(x=kv, y=iv, mode='markers',
+                    name=target_komp, marker=dict(size=10, symbol='x',
+                    color=COLOR_KOMP, line=dict(width=2))))
+            fig_ipa.update_traces(marker=dict(size=11), textposition='top center',
+                textfont=dict(size=9), selector=dict(mode='markers+text'))
+            fig_ipa.add_vline(x=ms, line_dash="dash", line_color="#334155")
+            fig_ipa.add_hline(y=mi, line_dash="dash", line_color="#334155")
+            fig_ipa.update_layout(height=480)
             st.plotly_chart(elite_layout(fig_ipa, f"IPA Matrix — {sel_dim}"),
                 use_container_width=True)
 
@@ -713,1048 +844,960 @@ with tab2:
     wt1, wt2, wt3 = st.columns(3)
 
     with wt1:
-        df_tl = df[df['PANEL'] == 'Teller'].dropna(subset=['TL5','TL6'])
+        df_tl = df[df['PANEL']=='Teller'].dropna(subset=['TL5','TL6'])
         if len(df_tl) > 0:
-            wt_df = pd.DataFrame({
-                'Metrik': ['Aktual','Toleransi'],
-                'Menit':  [df_tl['TL5'].mean(), df_tl['TL6'].mean()]
-            })
-            fig_wt = px.bar(wt_df, x='Metrik', y='Menit', color='Metrik',
-                text='Menit',
-                color_discrete_map={'Aktual': COLOR_KOMP, 'Toleransi': COLOR_XYZ})
+            wtd = pd.DataFrame({'Metrik':['Aktual','Toleransi'],
+                'Menit':[df_tl['TL5'].mean(), df_tl['TL6'].mean()]})
+            fig_wt = px.bar(wtd, x='Metrik', y='Menit', color='Metrik', text='Menit',
+                color_discrete_map={'Aktual':COLOR_KOMP,'Toleransi':COLOR_XYZ})
             fig_wt.update_traces(texttemplate='%{y:.1f} mnt', textposition='outside')
-            fig_wt.update_yaxes(range=[0, df_tl['TL6'].mean() * 1.5])
-            st.plotly_chart(elite_layout(fig_wt, "⏳ Teller: Aktual vs Toleransi"),
+            fig_wt.update_yaxes(range=[0, df_tl['TL6'].mean()*1.6])
+            st.plotly_chart(elite_layout(fig_wt,"⏳ Teller: Aktual vs Toleransi"),
                 use_container_width=True)
             insight_box(
-                f"Rata-rata tunggu Teller: **{df_tl['TL5'].mean():.1f} menit** "
-                f"(toleransi: {df_tl['TL6'].mean():.1f} menit). "
-                f"Gap buffer: {df_tl['TL6'].mean() - df_tl['TL5'].mean():.1f} menit."
+                f"Rata-rata tunggu Teller: **{df_tl['TL5'].mean():.1f} mnt** "
+                f"(toleransi: {df_tl['TL6'].mean():.1f} mnt). "
+                f"Buffer aman: {df_tl['TL6'].mean()-df_tl['TL5'].mean():.1f} mnt."
             )
 
     with wt2:
-        df_cs_wt = df[df['PANEL'] == 'CS'].dropna(subset=['CS5','CS6'])
-        if len(df_cs_wt) > 0:
-            wt_df2 = pd.DataFrame({
-                'Metrik': ['Aktual','Toleransi'],
-                'Menit':  [df_cs_wt['CS5'].mean(), df_cs_wt['CS6'].mean()]
-            })
-            fig_wt2 = px.bar(wt_df2, x='Metrik', y='Menit', color='Metrik',
-                text='Menit',
-                color_discrete_map={'Aktual': COLOR_KOMP, 'Toleransi': COLOR_XYZ})
+        df_cswt = df[df['PANEL']=='CS'].dropna(subset=['CS5','CS6'])
+        if len(df_cswt) > 0:
+            wtd2 = pd.DataFrame({'Metrik':['Aktual','Toleransi'],
+                'Menit':[df_cswt['CS5'].mean(), df_cswt['CS6'].mean()]})
+            fig_wt2 = px.bar(wtd2, x='Metrik', y='Menit', color='Metrik', text='Menit',
+                color_discrete_map={'Aktual':COLOR_KOMP,'Toleransi':COLOR_XYZ})
             fig_wt2.update_traces(texttemplate='%{y:.1f} mnt', textposition='outside')
-            fig_wt2.update_yaxes(range=[0, df_cs_wt['CS6'].mean() * 1.5])
-            st.plotly_chart(elite_layout(fig_wt2, "⏳ CS: Aktual vs Toleransi"),
+            fig_wt2.update_yaxes(range=[0, df_cswt['CS6'].mean()*1.6])
+            st.plotly_chart(elite_layout(fig_wt2,"⏳ CS: Aktual vs Toleransi"),
                 use_container_width=True)
 
     with wt3:
-        # Jam sibuk Teller & CS
-        st.markdown("**⏰ Jam Paling Sibuk**")
-        jam_tl = df['TL1'].dropna().value_counts().reset_index()
-        jam_tl.columns = ['Jam','Count']
-        jam_cs = df['CS1'].dropna().value_counts().reset_index()
-        jam_cs.columns = ['Jam','Count']
+        # Jam sibuk
+        jt = df['TL1'].dropna().value_counts().reset_index()
+        jt.columns = ['Jam','Teller']
+        jcs = df['CS1'].dropna().value_counts().reset_index()
+        jcs.columns = ['Jam','CS']
+        jam_df = pd.merge(jt, jcs, on='Jam', how='outer').fillna(0)
         fig_jam = go.Figure()
-        fig_jam.add_trace(go.Bar(
-            name='Teller', x=jam_tl['Jam'], y=jam_tl['Count'],
-            marker_color=COLOR_XYZ
-        ))
-        fig_jam.add_trace(go.Bar(
-            name='CS', x=jam_cs['Jam'], y=jam_cs['Count'],
-            marker_color=COLOR_KOMP
-        ))
-        fig_jam.update_layout(barmode='group', xaxis_tickangle=-30)
-        st.plotly_chart(elite_layout(fig_jam, "Jam Paling Sibuk: Teller vs CS"),
+        fig_jam.add_trace(go.Bar(name='Teller', x=jam_df['Jam'], y=jam_df['Teller'],
+            marker_color=COLOR_XYZ))
+        fig_jam.add_trace(go.Bar(name='CS', x=jam_df['Jam'], y=jam_df['CS'],
+            marker_color=COLOR_KOMP))
+        fig_jam.update_layout(barmode='group', xaxis_tickangle=-25, height=280)
+        st.plotly_chart(elite_layout(fig_jam,"⏰ Jam Paling Sibuk"),
             use_container_width=True)
-
-        # Top jam sibuk
-        if len(jam_tl) > 0:
-            top_jam = jam_tl.iloc[0]['Jam']
-            insight_box(f"Jam paling sibuk untuk Teller: **{top_jam}**. "
+        if len(jt) > 0:
+            insight_box(f"Jam tersibuk Teller: **{jt.iloc[0]['Jam']}**. "
                         f"Pertimbangkan penambahan staf di jam ini.")
+
+    # ── Waktu Tunggu per Cabang ───────────────────────────────────────
+    st.markdown("<div class='section-header'>⏱️ Waktu Tunggu per Cabang</div>",
+                unsafe_allow_html=True)
+    wt_panel = st.radio("Panel:", ["Teller","CS"], horizontal=True)
+    if wt_panel == "Teller":
+        wt_cab = df[df['PANEL']=='Teller'].groupby('CABANG').agg(
+            Aktual=('TL5','mean'), Toleransi=('TL6','mean'), Count=('SERIAL','count')
+        ).reset_index()
+        wt_cab = wt_cab[wt_cab['Count'] >= 5].sort_values('Aktual', ascending=False)
+    else:
+        wt_cab = df[df['PANEL']=='CS'].groupby('CABANG').agg(
+            Aktual=('CS5','mean'), Toleransi=('CS6','mean'), Count=('SERIAL','count')
+        ).reset_index()
+        wt_cab = wt_cab[wt_cab['Count'] >= 5].sort_values('Aktual', ascending=False)
+
+    if len(wt_cab) > 0:
+        wt_cab['Melebihi Toleransi'] = wt_cab['Aktual'] > wt_cab['Toleransi']
+        fig_wtc = go.Figure()
+        fig_wtc.add_trace(go.Bar(name='Aktual', x=wt_cab['CABANG'],
+            y=wt_cab['Aktual'], marker_color=COLOR_KOMP))
+        fig_wtc.add_trace(go.Bar(name='Toleransi', x=wt_cab['CABANG'],
+            y=wt_cab['Toleransi'], marker_color=COLOR_XYZ, opacity=0.7))
+        fig_wtc.update_layout(barmode='overlay', xaxis_tickangle=-30, height=380)
+        st.plotly_chart(elite_layout(fig_wtc, f"Waktu Tunggu {wt_panel} per Cabang"),
+            use_container_width=True)
+        over_tol = wt_cab[wt_cab['Melebihi Toleransi']]
+        if len(over_tol) > 0:
+            insight_box(
+                f"**{len(over_tol)} cabang** waktu tunggu {wt_panel} melebihi toleransi: "
+                f"{', '.join(over_tol['CABANG'].tolist()[:5])}."
+            )
 
 # =====================================================================
 # TAB 3 — BRAND & KOMPETITOR
 # =====================================================================
 with tab3:
-    # ── 24 atribut brand ─────────────────────────────────────────────
     brand_imp_cols = [f"T_C1A_{i}" for i in range(1,25) if f"T_C1A_{i}" in df.columns]
-    brand_xyz_cols = sorted(
-        [c for c in df.columns if c.startswith("T_C1B_") and
-         int(c.split("_")[-1]) % 3 == 2],
-        key=lambda x: int(x.split("_")[-1])
-    )
-    brand_kom_cols = sorted(
-        [c for c in df.columns if c.startswith("T_C1B_") and
-         int(c.split("_")[-1]) % 3 == 0],
-        key=lambda x: int(x.split("_")[-1])
-    )
+    brand_xyz_cols = sorted([c for c in df.columns if c.startswith("T_C1B_") and
+        int(c.split("_")[-1]) % 3 == 2], key=lambda x: int(x.split("_")[-1]))
+    brand_kom_cols = sorted([c for c in df.columns if c.startswith("T_C1B_") and
+        int(c.split("_")[-1]) % 3 == 0], key=lambda x: int(x.split("_")[-1]))
 
-    brand_labels = [short_label(c, col_map) for c in brand_imp_cols]
-    brand_imp    = [df[c].mean() for c in brand_imp_cols]
-    brand_xyz    = [df[c].mean() for c in brand_xyz_cols[:len(brand_imp_cols)]]
-    brand_kom    = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan
-                    for c in brand_kom_cols[:len(brand_imp_cols)]]
+    blabels = [short_label(c, col_map) for c in brand_imp_cols]
+    bimp    = [df[c].mean() for c in brand_imp_cols]
+    bxyz    = [df[c].mean() for c in brand_xyz_cols[:len(brand_imp_cols)]]
+    bkom    = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan
+               for c in brand_kom_cols[:len(brand_imp_cols)]]
 
     b1, b2 = st.columns(2)
     with b1:
-        st.markdown("<div class='section-header'>🕸️ Radar Brand: XYZ vs Kompetitor</div>",
+        st.markdown("<div class='section-header'>🕸️ Radar Brand</div>",
                     unsafe_allow_html=True)
-        fig_radar = go.Figure()
-        fig_radar.add_trace(go.Scatterpolar(
-            r=brand_xyz, theta=brand_labels, fill='toself',
+        fig_r = go.Figure()
+        fig_r.add_trace(go.Scatterpolar(r=bxyz, theta=blabels, fill='toself',
             name='Bank XYZ', line_color=COLOR_XYZ,
-            fillcolor=f'rgba(37,99,235,0.15)'
-        ))
-        fig_radar.add_trace(go.Scatterpolar(
-            r=brand_kom, theta=brand_labels, fill='toself',
+            fillcolor='rgba(59,130,246,0.12)'))
+        fig_r.add_trace(go.Scatterpolar(r=bkom, theta=blabels, fill='toself',
             name=target_komp, line_color=COLOR_KOMP,
-            fillcolor=f'rgba(225,29,72,0.1)'
-        ))
-        fig_radar.update_layout(
-            polar=dict(radialaxis=dict(visible=True, range=[3,6])),
-            legend=dict(orientation="h", y=-0.15), height=500
+            fillcolor='rgba(248,113,113,0.08)'))
+        fig_r.update_layout(
+            polar=dict(
+                bgcolor='#1E293B',
+                radialaxis=dict(visible=True, range=[3,6],
+                    gridcolor='#334155', tickfont=dict(color='#94A3B8')),
+                angularaxis=dict(tickfont=dict(color='#CBD5E1', size=10))
+            ),
+            legend=dict(orientation="h", y=-0.12), height=480
         )
-        st.plotly_chart(elite_layout(fig_radar), use_container_width=True)
+        st.plotly_chart(elite_layout(fig_r), use_container_width=True)
 
     with b2:
-        st.markdown("<div class='section-header'>🎯 IPA Matrix — 24 Atribut Brand</div>",
+        st.markdown("<div class='section-header'>🎯 IPA Matrix Brand</div>",
                     unsafe_allow_html=True)
-        brand_df = pd.DataFrame({
-            'Label': brand_labels,
-            'Importance': brand_imp,
-            'Satisfaction': brand_xyz
-        })
-        m_imp = np.nanmean(brand_imp)
-        m_sat = np.nanmean(brand_xyz)
+        bdf = pd.DataFrame({'Label':blabels,'Importance':bimp,'Satisfaction':bxyz})
+        mi_b, ms_b = np.nanmean(bimp), np.nanmean(bxyz)
+        def bq(r):
+            if r['Importance']>=mi_b and r['Satisfaction']<ms_b: return "⚠️ Perbaiki"
+            elif r['Importance']>=mi_b and r['Satisfaction']>=ms_b: return "🌟 Pertahankan"
+            elif r['Importance']<mi_b and r['Satisfaction']<ms_b: return "💤 Rendah"
+            else: return "✅ Berlebihan"
+        bdf['Kuadran'] = bdf.apply(bq, axis=1)
+        qcm = {"⚠️ Perbaiki":COLOR_KOMP,"🌟 Pertahankan":"#34D399",
+               "💤 Rendah":COLOR_IMPRT,"✅ Berlebihan":"#FBBF24"}
+        fig_ib = px.scatter(bdf, x='Satisfaction', y='Importance', text='Label',
+            color='Kuadran', color_discrete_map=qcm, hover_data=['Kuadran'])
+        fig_ib.update_traces(marker=dict(size=10), textposition='top center',
+            textfont=dict(size=8))
+        fig_ib.add_vline(x=ms_b, line_dash="dash", line_color="#334155")
+        fig_ib.add_hline(y=mi_b, line_dash="dash", line_color="#334155")
+        fig_ib.update_layout(height=480)
+        st.plotly_chart(elite_layout(fig_ib), use_container_width=True)
 
-        # Beri warna per kuadran
-        def quadrant(row):
-            if row['Importance'] >= m_imp and row['Satisfaction'] < m_sat:
-                return "⚠️ Perbaiki Segera"
-            elif row['Importance'] >= m_imp and row['Satisfaction'] >= m_sat:
-                return "🌟 Pertahankan"
-            elif row['Importance'] < m_imp and row['Satisfaction'] < m_sat:
-                return "💤 Prioritas Rendah"
-            else:
-                return "✅ Berlebihan"
-
-        brand_df['Kuadran'] = brand_df.apply(quadrant, axis=1)
-        q_colors = {
-            "⚠️ Perbaiki Segera": COLOR_KOMP,
-            "🌟 Pertahankan": "#10B981",
-            "💤 Prioritas Rendah": "#94A3B8",
-            "✅ Berlebihan": "#F59E0B"
-        }
-        fig_ipa_b = px.scatter(brand_df, x='Satisfaction', y='Importance',
-            text='Label', color='Kuadran', color_discrete_map=q_colors,
-            hover_data=['Kuadran'])
-        fig_ipa_b.update_traces(
-            marker=dict(size=11), textposition='top center',
-            textfont=dict(size=9)
-        )
-        fig_ipa_b.add_vline(x=m_sat, line_dash="dash", line_color="#CBD5E1")
-        fig_ipa_b.add_hline(y=m_imp, line_dash="dash", line_color="#CBD5E1")
-        fig_ipa_b.update_layout(height=500)
-        st.plotly_chart(elite_layout(fig_ipa_b), use_container_width=True)
-
-    # ── Gap bar chart ─────────────────────────────────────────────────
-    st.markdown("<div class='section-header'>📊 Gap Kompetitif per Atribut Brand</div>",
+    # ── Gap bar ───────────────────────────────────────────────────────
+    st.markdown("<div class='section-header'>📊 Gap Kompetitif per Atribut</div>",
                 unsafe_allow_html=True)
-    gap_b = pd.DataFrame({
-        'Atribut': brand_labels,
-        'XYZ': brand_xyz,
-        'Kompetitor': brand_kom,
-        'Gap': [x - k for x, k in zip(brand_xyz, brand_kom)]
-    }).sort_values('Gap')
-    gap_b['Warna'] = np.where(gap_b['Gap'] < 0, COLOR_KOMP, COLOR_XYZ)
+    gb = pd.DataFrame({'Atribut':blabels,'XYZ':bxyz,'Komp':bkom,
+        'Gap':[x-k for x,k in zip(bxyz,bkom)]}).sort_values('Gap')
+    gb['Warna'] = np.where(gb['Gap']<0, COLOR_KOMP, COLOR_XYZ)
+    fig_gb = px.bar(gb, x='Gap', y='Atribut', orientation='h', text='Gap',
+        hover_data=['XYZ','Komp'])
+    fig_gb.update_traces(marker_color=gb['Warna'],
+        texttemplate='%{x:.2f}', textposition='outside')
+    st.plotly_chart(elite_layout(fig_gb,
+        f"Gap Brand XYZ vs {target_komp} (+= XYZ unggul)", height=520),
+        use_container_width=True)
 
-    fig_gap_b = px.bar(gap_b, x='Gap', y='Atribut', orientation='h',
-        text='Gap', hover_data=['XYZ','Kompetitor'])
-    fig_gap_b.update_traces(
-        marker_color=gap_b['Warna'],
-        texttemplate='%{x:.2f}', textposition='outside'
-    )
-    st.plotly_chart(
-        elite_layout(fig_gap_b, f"Gap Brand XYZ vs {target_komp} (+ = XYZ unggul)",
-            height=500),
-        use_container_width=True
-    )
+    tg = gb.nlargest(1,'Gap').iloc[0]
+    bg = gb.nsmallest(1,'Gap').iloc[0]
+    insight_box(f"Keunggulan terbesar XYZ: **{tg['Atribut']}** (+{tg['Gap']:.2f}). "
+                f"Perlu ditingkatkan: **{bg['Atribut']}** ({bg['Gap']:.2f}).")
 
-    # Auto insight brand gap
-    top_gap  = gap_b.nlargest(1, 'Gap').iloc[0]
-    bot_gap  = gap_b.nsmallest(1, 'Gap').iloc[0]
-    insight_box(
-        f"Keunggulan terbesar XYZ: **{top_gap['Atribut']}** "
-        f"(gap +{top_gap['Gap']:.2f}). "
-        f"Atribut yang perlu ditingkatkan: **{bot_gap['Atribut']}** "
-        f"(gap {bot_gap['Gap']:.2f})."
-    )
-
-    # ── Share of wallet ───────────────────────────────────────────────
+    # ── Share of Wallet ───────────────────────────────────────────────
     st.markdown("<div class='section-header'>🏦 Share of Wallet</div>",
                 unsafe_allow_html=True)
     sw1, sw2, sw3 = st.columns(3)
-
     with sw1:
-        banks_other = df['A1AX'].dropna().str.split(';').explode().str.strip()
-        banks_other = banks_other[banks_other != '']
-        bc = banks_other.value_counts().head(8).reset_index()
-        bc.columns = ['Bank','Jumlah']
-        fig_sw = px.bar(bc, x='Jumlah', y='Bank', orientation='h',
+        bo = df['A1AX'].dropna().str.split(';').explode().str.strip()
+        bo = bo[bo != ''].value_counts().head(8).reset_index()
+        bo.columns = ['Bank','Jumlah']
+        fig_bk = px.bar(bo, x='Jumlah', y='Bank', orientation='h',
             color_discrete_sequence=[COLOR_XYZ], text='Jumlah')
-        fig_sw.update_traces(textposition='outside')
-        st.plotly_chart(elite_layout(fig_sw, "Bank Lain yang Aktif Digunakan"),
+        fig_bk.update_traces(textposition='outside')
+        st.plotly_chart(elite_layout(fig_bk,"Bank Lain yang Aktif"),
             use_container_width=True)
-
     with sw2:
-        simpan = df['A1B'].value_counts().reset_index()
-        simpan.columns = ['Bank','Jumlah']
-        fig_s = px.pie(simpan, values='Jumlah', names='Bank', hole=0.5,
+        sp = df['A1B'].value_counts().reset_index()
+        sp.columns = ['Bank','Jumlah']
+        fig_sp = px.pie(sp, values='Jumlah', names='Bank', hole=0.55,
             color_discrete_sequence=px.colors.qualitative.Set2)
-        st.plotly_chart(elite_layout(fig_s, "Bank Utama Simpan Dana"),
+        st.plotly_chart(elite_layout(fig_sp,"Bank Utama Simpan Dana"),
             use_container_width=True)
-
     with sw3:
-        transaksi = df['A1C'].value_counts().reset_index()
-        transaksi.columns = ['Bank','Jumlah']
-        fig_t = px.pie(transaksi, values='Jumlah', names='Bank', hole=0.5,
+        tr = df['A1C'].value_counts().reset_index()
+        tr.columns = ['Bank','Jumlah']
+        fig_tr = px.pie(tr, values='Jumlah', names='Bank', hole=0.55,
             color_discrete_sequence=px.colors.qualitative.Pastel)
-        st.plotly_chart(elite_layout(fig_t, "Bank Utama Bertransaksi"),
+        st.plotly_chart(elite_layout(fig_tr,"Bank Utama Bertransaksi"),
             use_container_width=True)
 
-    # Insight share of wallet
-    top_rival = bc.iloc[0]['Bank'] if len(bc) > 0 else "N/A"
-    xyz_as_main_save  = (df['A1B'] == 'Bank XYZ').mean() * 100
-    xyz_as_main_trans = (df['A1C'] == 'Bank XYZ').mean() * 100
-    insight_box(
-        f"XYZ menjadi rekening utama simpan dana bagi **{xyz_as_main_save:.0f}%** responden "
-        f"dan utama transaksi bagi **{xyz_as_main_trans:.0f}%** responden. "
-        f"Kompetitor terbesar: **{top_rival}**."
-    )
+    xyz_sp = (df['A1B']=='Bank XYZ').mean()*100
+    xyz_tr = (df['A1C']=='Bank XYZ').mean()*100
+    riv    = bo.iloc[0]['Bank'] if len(bo)>0 else "N/A"
+    insight_box(f"XYZ sebagai rekening utama simpan: **{xyz_sp:.0f}%**, "
+                f"utama transaksi: **{xyz_tr:.0f}%**. Rival terbesar: **{riv}**.")
 
 # =====================================================================
 # TAB 4 — TOUCHPOINT & IPA
 # =====================================================================
 with tab4:
-    st.markdown("<div class='section-header'>🎯 IPA Matrix per Touchpoint</div>",
+    st.markdown("<div class='section-header'>🎯 Analisis Touchpoint Interaktif</div>",
                 unsafe_allow_html=True)
+    tp_c1, tp_c2, tp_c3 = st.columns(3)
+    with tp_c1: sel_tp = st.selectbox("Touchpoint:", list(DIMENSI_MAP.keys()))
+    with tp_c2: tp_view = st.radio("Tampilan:",["IPA Scatter","Bar Comparison"],horizontal=True)
+    with tp_c3:
+        tp_cab = st.selectbox("Filter Cabang:",
+            ["Semua"] + sorted(df['CABANG'].unique().tolist()))
 
-    tp1, tp2, tp3 = st.columns(3)
-    with tp1:
-        sel_tp = st.selectbox("Touchpoint:", list(DIMENSI_MAP.keys()))
-    with tp2:
-        tp_view = st.radio("Tampilan:", ["IPA Scatter","Bar Comparison"], horizontal=True)
-    with tp3:
-        tp_cab_filter = st.selectbox(
-            "Filter Cabang:",
-            ["Semua"] + sorted(df['CABANG'].unique().tolist())
-        )
+    dft  = df if tp_cab=="Semua" else df[df['CABANG']==tp_cab]
+    dftk = df_has_komp if tp_cab=="Semua" \
+           else df_has_komp[df_has_komp['CABANG']==tp_cab]
 
-    df_tp      = df if tp_cab_filter == "Semua" else df[df['CABANG'] == tp_cab_filter]
-    df_tp_komp = df_has_komp if tp_cab_filter == "Semua" \
-                 else df_has_komp[df_has_komp['CABANG'] == tp_cab_filter]
+    dtp  = DIMENSI_MAP[sel_tp]
+    itpc = [c for c in dtp["imp"]  if c in dft.columns]
+    xtpc = [c for c in dtp["xyz"]  if c in dft.columns]
+    ktpc = [c for c in dtp["komp"] if c in dftk.columns]
+    mtp  = min(len(itpc), len(xtpc))
 
-    dim_tp     = DIMENSI_MAP[sel_tp]
-    imp_tp     = [c for c in dim_tp["imp"]  if c in df_tp.columns]
-    xyz_tp     = [c for c in dim_tp["xyz"]  if c in df_tp.columns]
-    komp_tp    = [c for c in dim_tp["komp"] if c in df_tp_komp.columns]
-    min_tp     = min(len(imp_tp), len(xyz_tp))
-
-    if min_tp > 0:
-        labels_tp = [short_label(c, col_map) for c in imp_tp[:min_tp]]
-        imp_v     = [df_tp[c].mean()          for c in imp_tp[:min_tp]]
-        xyz_v     = [df_tp[c].mean()          for c in xyz_tp[:min_tp]]
-        kom_v     = [df_tp_komp[c].mean() if c in df_tp_komp.columns else np.nan
-                     for c in komp_tp[:min_tp]] if komp_tp else []
+    if mtp > 0:
+        ltps = [short_label(c,col_map) for c in itpc[:mtp]]
+        ivtp = [dft[c].mean()  for c in itpc[:mtp]]
+        xvtp = [dft[c].mean()  for c in xtpc[:mtp]]
+        kvtp = [dftk[c].mean() if c in dftk.columns else np.nan
+                for c in ktpc[:mtp]] if ktpc else []
 
         if tp_view == "IPA Scatter":
-            tp_col1, tp_col2 = st.columns([1.6, 1])
-            with tp_col1:
-                ipa_tp_df = pd.DataFrame({
-                    'Item': labels_tp,
-                    'Importance': imp_v,
-                    'Satisfaction XYZ': xyz_v
-                })
-                m_i_tp = np.nanmean(imp_v)
-                m_s_tp = np.nanmean(xyz_v)
-                ipa_tp_df['Kuadran'] = ipa_tp_df.apply(
-                    lambda r: "⚠️ Perbaiki" if r['Importance'] >= m_i_tp and r['Satisfaction XYZ'] < m_s_tp
-                    else "🌟 Pertahankan" if r['Importance'] >= m_i_tp and r['Satisfaction XYZ'] >= m_s_tp
-                    else "💤 Rendah" if r['Importance'] < m_i_tp and r['Satisfaction XYZ'] < m_s_tp
-                    else "✅ Lebih", axis=1
-                )
-                q_col = {"⚠️ Perbaiki": COLOR_KOMP, "🌟 Pertahankan": "#10B981",
-                         "💤 Rendah": "#94A3B8", "✅ Lebih": "#F59E0B"}
-
-                fig_ipa_tp = px.scatter(ipa_tp_df, x='Satisfaction XYZ', y='Importance',
-                    text='Item', color='Kuadran', color_discrete_map=q_col)
-                if kom_v:
-                    fig_ipa_tp.add_trace(go.Scatter(
-                        x=kom_v, y=imp_v, mode='markers', name=target_komp,
-                        marker=dict(size=10, symbol='x', color=COLOR_KOMP,
-                                    line=dict(width=2))
-                    ))
-                fig_ipa_tp.update_traces(
-                    marker=dict(size=12), textposition='top center',
-                    textfont=dict(size=9), selector=dict(mode='markers+text')
-                )
-                fig_ipa_tp.add_vline(x=m_s_tp, line_dash="dash", line_color="#CBD5E1")
-                fig_ipa_tp.add_hline(y=m_i_tp, line_dash="dash", line_color="#CBD5E1")
-                fig_ipa_tp.update_layout(height=480)
-                st.plotly_chart(elite_layout(fig_ipa_tp, f"IPA Matrix — {sel_tp}"),
+            tp1, tp2 = st.columns([1.6,1])
+            with tp1:
+                itpdf = pd.DataFrame({'Item':ltps,'Importance':ivtp,'Satisfaction':xvtp})
+                mip, msp = np.nanmean(ivtp), np.nanmean(xvtp)
+                def tpq(r):
+                    if r['Importance']>=mip and r['Satisfaction']<msp: return "⚠️ Perbaiki"
+                    elif r['Importance']>=mip and r['Satisfaction']>=msp: return "🌟 Pertahankan"
+                    elif r['Importance']<mip and r['Satisfaction']<msp: return "💤 Rendah"
+                    else: return "✅ Berlebihan"
+                itpdf['Kuadran'] = itpdf.apply(tpq, axis=1)
+                qtp = {"⚠️ Perbaiki":COLOR_KOMP,"🌟 Pertahankan":"#34D399",
+                       "💤 Rendah":COLOR_IMPRT,"✅ Berlebihan":"#FBBF24"}
+                fig_itp = px.scatter(itpdf, x='Satisfaction', y='Importance',
+                    text='Item', color='Kuadran', color_discrete_map=qtp)
+                if kvtp:
+                    fig_itp.add_trace(go.Scatter(x=kvtp, y=ivtp, mode='markers',
+                        name=target_komp, marker=dict(size=10, symbol='x',
+                        color=COLOR_KOMP, line=dict(width=2))))
+                fig_itp.update_traces(marker=dict(size=11), textposition='top center',
+                    textfont=dict(size=9), selector=dict(mode='markers+text'))
+                fig_itp.add_vline(x=msp, line_dash="dash", line_color="#334155")
+                fig_itp.add_hline(y=mip, line_dash="dash", line_color="#334155")
+                fig_itp.update_layout(height=460)
+                st.plotly_chart(elite_layout(fig_itp,f"IPA — {sel_tp}"),
                     use_container_width=True)
-
-            with tp_col2:
-                # Tabel prioritas per kuadran
+            with tp2:
                 st.markdown("**📋 Prioritas per Kuadran:**")
-                for q_name, q_col_val in q_col.items():
-                    items_q = ipa_tp_df[ipa_tp_df['Kuadran'] == q_name]['Item'].tolist()
+                for qn, qcv in qtp.items():
+                    items_q = itpdf[itpdf['Kuadran']==qn]['Item'].tolist()
                     if items_q:
-                        st.markdown(
-                            f"<span style='color:{q_col_val}; font-weight:700;'>{q_name}</span>",
-                            unsafe_allow_html=True
-                        )
+                        st.markdown(f"<span style='color:{qcv};font-weight:700;'>{qn}</span>",
+                            unsafe_allow_html=True)
                         for it in items_q:
-                            st.markdown(f"  • {it}")
+                            st.markdown(f"<span style='color:#94A3B8;font-size:12px;'>• {it}</span>",
+                                unsafe_allow_html=True)
+        else:
+            fig_btp = go.Figure()
+            fig_btp.add_trace(go.Bar(name='Importance', x=ltps, y=ivtp,
+                marker_color=COLOR_IMPRT, opacity=0.7))
+            fig_btp.add_trace(go.Bar(name='Sat. XYZ', x=ltps, y=xvtp,
+                marker_color=COLOR_XYZ))
+            if kvtp:
+                fig_btp.add_trace(go.Bar(name=f'Sat. {target_komp}', x=ltps, y=kvtp,
+                    marker_color=COLOR_KOMP, opacity=0.8))
+            fig_btp.update_layout(barmode='group', yaxis_range=[3,6.6],
+                xaxis_tickangle=-25, height=420)
+            st.plotly_chart(elite_layout(fig_btp,f"Comparison — {sel_tp}"),
+                use_container_width=True)
 
-        else:  # Bar Comparison
-            fig_bar_tp = go.Figure()
-            fig_bar_tp.add_trace(go.Bar(
-                name='Importance', x=labels_tp, y=imp_v,
-                marker_color=COLOR_IMPRT, opacity=0.7
-            ))
-            fig_bar_tp.add_trace(go.Bar(
-                name='Satisfaction XYZ', x=labels_tp, y=xyz_v,
-                marker_color=COLOR_XYZ
-            ))
-            if kom_v:
-                fig_bar_tp.add_trace(go.Bar(
-                    name=f'Satisfaction {target_komp}', x=labels_tp, y=kom_v,
-                    marker_color=COLOR_KOMP, opacity=0.8
-                ))
-            fig_bar_tp.update_layout(barmode='group', yaxis_range=[3, 6.5],
-                                      xaxis_tickangle=-30, height=450)
-            st.plotly_chart(
-                elite_layout(fig_bar_tp, f"Comparison — {sel_tp}"),
-                use_container_width=True
-            )
-
-        # Gap kompetitif
-        if kom_v:
+        if kvtp:
             st.markdown("<div class='section-header'>📊 Gap Kompetitif per Item</div>",
                         unsafe_allow_html=True)
-            gap_tp_df = pd.DataFrame({
-                'Item': labels_tp,
-                'Gap': [x - k for x, k in zip(xyz_v, kom_v)]
-            }).sort_values('Gap')
-            gap_tp_df['Warna'] = np.where(gap_tp_df['Gap'] < 0, COLOR_KOMP, COLOR_XYZ)
-            fig_gap_tp = px.bar(gap_tp_df, x='Gap', y='Item', orientation='h',
-                text='Gap')
-            fig_gap_tp.update_traces(
-                marker_color=gap_tp_df['Warna'],
-                texttemplate='%{x:.2f}', textposition='outside'
-            )
-            st.plotly_chart(
-                elite_layout(fig_gap_tp, f"Gap XYZ vs {target_komp} — {sel_tp}",
-                    height=400),
-                use_container_width=True
-            )
+            gtdf = pd.DataFrame({'Item':ltps,
+                'Gap':[x-k for x,k in zip(xvtp,kvtp)]}).sort_values('Gap')
+            gtdf['Warna'] = np.where(gtdf['Gap']<0, COLOR_KOMP, COLOR_XYZ)
+            fig_gtp = px.bar(gtdf, x='Gap', y='Item', orientation='h', text='Gap')
+            fig_gtp.update_traces(marker_color=gtdf['Warna'],
+                texttemplate='%{x:.2f}', textposition='outside')
+            st.plotly_chart(elite_layout(fig_gtp,
+                f"Gap XYZ vs {target_komp} — {sel_tp}", height=380),
+                use_container_width=True)
 
     st.markdown("---")
 
-    # ── Jenis transaksi vs skor ───────────────────────────────────────
+    # ── Jenis transaksi ───────────────────────────────────────────────
     st.markdown("<div class='section-header'>🔄 Jenis Transaksi vs Skor Layanan</div>",
                 unsafe_allow_html=True)
-    d1_map = {
+    d1m = {
         'TELLER': df[df['D1_TYPE']=='TELLER']['OVR_TELLER_XYZ'].mean(),
         'CS':     df[df['D1_TYPE']=='CS']['OVR_CS_XYZ'].mean(),
-        'BOTH':   df[df['D1_TYPE']=='BOTH'][['OVR_TELLER_XYZ','OVR_CS_XYZ']].mean(axis=1).mean()
+        'KEDUANYA': df[df['D1_TYPE']=='BOTH'][['OVR_TELLER_XYZ','OVR_CS_XYZ']].mean(axis=1).mean()
     }
-    d1_df = pd.DataFrame({
-        'Jenis': list(d1_map.keys()),
-        'Skor':  list(d1_map.values())
-    })
-    fig_d1 = px.bar(d1_df, x='Jenis', y='Skor', color='Jenis',
-        text='Skor',
-        color_discrete_map={'TELLER': COLOR_XYZ, 'CS': COLOR_KOMP, 'BOTH': '#F59E0B'})
+    d1df = pd.DataFrame({'Jenis':list(d1m.keys()),'Skor':list(d1m.values())})
+    fig_d1 = px.bar(d1df, x='Jenis', y='Skor', color='Jenis', text='Skor',
+        color_discrete_map={'TELLER':COLOR_XYZ,'CS':COLOR_KOMP,'KEDUANYA':'#FBBF24'})
     fig_d1.update_traces(texttemplate='%{y:.2f}', textposition='outside')
-    fig_d1.update_yaxes(range=[4.5, 6.3])
-    st.plotly_chart(elite_layout(fig_d1,
-        "Rata-rata Skor Berdasarkan Jenis Transaksi Hari Ini"),
+    fig_d1.update_yaxes(range=[4.5,6.4])
+    st.plotly_chart(elite_layout(fig_d1,"Skor Berdasarkan Jenis Transaksi"),
         use_container_width=True)
 
 # =====================================================================
 # TAB 5 — EMOSI & LOYALITAS
 # =====================================================================
 with tab5:
-    # Kolom emosi
-    emo_pos_xyz_cols = [c for c in ["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11",
-        "T_I1A_14","T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in df.columns]
-    emo_neg_xyz_cols = [c for c in ["T_I1A_29","T_I1A_32","T_I1A_35","T_I1A_38",
-        "T_I1A_41","T_I1A_44","T_I1A_47"] if c in df.columns]
-    emo_pos_kom_cols = [c for c in ["T_I1A_3","T_I1A_6","T_I1A_9","T_I1A_12",
-        "T_I1A_15","T_I1A_18","T_I1A_21","T_I1A_24","T_I1A_27"] if c in df.columns]
-    emo_neg_kom_cols = [c for c in ["T_I1A_30","T_I1A_33","T_I1A_36","T_I1A_39",
-        "T_I1A_42","T_I1A_45","T_I1A_48"] if c in df.columns]
+    epc = [c for c in ["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11","T_I1A_14",
+           "T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in df.columns]
+    enc = [c for c in ["T_I1A_29","T_I1A_32","T_I1A_35","T_I1A_38",
+           "T_I1A_41","T_I1A_44","T_I1A_47"] if c in df.columns]
+    epkc = [c for c in ["T_I1A_3","T_I1A_6","T_I1A_9","T_I1A_12","T_I1A_15",
+            "T_I1A_18","T_I1A_21","T_I1A_24","T_I1A_27"] if c in df_has_komp.columns]
+    enkc = [c for c in ["T_I1A_30","T_I1A_33","T_I1A_36","T_I1A_39",
+            "T_I1A_42","T_I1A_45","T_I1A_48"] if c in df_has_komp.columns]
 
-    emo_labels_pos = ["Bahagia","Percaya","Dihargai","Diperhatikan",
-                      "Aman","Fokus","Dimanjakan","Tertarik","Penuh Semangat"]
-    emo_labels_neg = ["Tidak Puas","Frustasi","Kecewa","Tertekan",
-                      "Tidak Bahagia","Diabaikan","Tergesa-gesa"]
+    epl_p = ["Bahagia","Percaya","Dihargai","Diperhatikan",
+             "Aman","Fokus","Dimanjakan","Tertarik","Penuh Semangat"]
+    epl_n = ["Tidak Puas","Frustasi","Kecewa","Tertekan",
+             "Tidak Bahagia","Diabaikan","Tergesa-gesa"]
 
-    emo_pos_xyz = [df[c].mean()             for c in emo_pos_xyz_cols]
-    emo_neg_xyz = [df[c].mean()             for c in emo_neg_xyz_cols]
-    emo_pos_kom = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan
-                   for c in emo_pos_kom_cols]
-    emo_neg_kom = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan
-                   for c in emo_neg_kom_cols]
+    epv = [df[c].mean() for c in epc]
+    env = [df[c].mean() for c in enc]
+    epkv = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan for c in epkc]
+    enkv = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan for c in enkc]
 
-    # Score agregat emosi
-    emo_pos_score_xyz = np.nanmean(emo_pos_xyz)
-    emo_neg_score_xyz = np.nanmean(emo_neg_xyz)
-    emo_pos_score_kom = np.nanmean(emo_pos_kom)
-    emo_neg_score_kom = np.nanmean(emo_neg_kom)
+    ep_avg = np.nanmean(epv)
+    en_avg = np.nanmean(env)
+    epk_avg = np.nanmean(epkv)
+    enk_avg = np.nanmean(enkv)
 
-    # KPI emosi
-    e_k1, e_k2, e_k3, e_k4 = st.columns(4)
-    e_k1.markdown(fmt_card("Emosi Positif XYZ",  f"{emo_pos_score_xyz:.2f}", "blue",
-        "Avg 9 dimensi positif"), unsafe_allow_html=True)
-    e_k2.markdown(fmt_card("Emosi Negatif XYZ",  f"{emo_neg_score_xyz:.2f}", "amber",
-        "Makin rendah makin baik"), unsafe_allow_html=True)
-    e_k3.markdown(fmt_card("Emosi Positif Komp", f"{emo_pos_score_kom:.2f}", "red",
-        "Avg 9 dimensi positif"), unsafe_allow_html=True)
-    e_k4.markdown(fmt_card("Emosi Negatif Komp", f"{emo_neg_score_kom:.2f}", "amber",
-        "Makin rendah makin baik"), unsafe_allow_html=True)
+    # KPI
+    ek = st.columns(4)
+    ek[0].markdown(fmt_card("Emosi Positif XYZ",  f"{ep_avg:.2f}", "blue", "Avg 9 dim."),
+        unsafe_allow_html=True)
+    ek[1].markdown(fmt_card("Emosi Negatif XYZ",  f"{en_avg:.2f}", "amber", "↓ makin baik"),
+        unsafe_allow_html=True)
+    ek[2].markdown(fmt_card("Emosi Positif Komp", f"{epk_avg:.2f}", "red", "Avg 9 dim."),
+        unsafe_allow_html=True)
+    ek[3].markdown(fmt_card("Emosi Negatif Komp", f"{enk_avg:.2f}", "amber", "↓ makin baik"),
+        unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
     insight_box(
-        f"XYZ unggul di emosi positif ({emo_pos_score_xyz:.2f} vs {emo_pos_score_kom:.2f}) "
-        f"dan lebih rendah di emosi negatif ({emo_neg_score_xyz:.2f} vs {emo_neg_score_kom:.2f}), "
-        f"menunjukkan pengalaman nasabah XYZ lebih positif secara keseluruhan."
+        f"XYZ unggul di emosi positif ({ep_avg:.2f} vs {epk_avg:.2f}) dan lebih rendah "
+        f"di emosi negatif ({en_avg:.2f} vs {enk_avg:.2f}). "
+        f"Pengalaman nasabah XYZ secara keseluruhan lebih positif."
     )
 
-    e1, e2 = st.columns(2)
-    with e1:
+    ec1, ec2 = st.columns(2)
+    with ec1:
         st.markdown("<div class='section-header'>😊 Emosi Positif</div>",
                     unsafe_allow_html=True)
         fig_ep = go.Figure()
-        fig_ep.add_trace(go.Bar(
-            name='XYZ', x=emo_labels_pos[:len(emo_pos_xyz)], y=emo_pos_xyz,
-            marker_color=COLOR_XYZ, text=np.round(emo_pos_xyz, 2), textposition='outside'
-        ))
-        fig_ep.add_trace(go.Bar(
-            name=target_komp, x=emo_labels_pos[:len(emo_pos_kom)], y=emo_pos_kom,
-            marker_color=COLOR_KOMP, text=np.round(emo_pos_kom, 2), textposition='outside'
-        ))
-        fig_ep.update_layout(barmode='group', yaxis_range=[3, 6.8], height=380)
+        fig_ep.add_trace(go.Bar(name='XYZ', x=epl_p[:len(epv)], y=epv,
+            marker_color=COLOR_XYZ, text=np.round(epv,2), textposition='outside'))
+        fig_ep.add_trace(go.Bar(name=target_komp, x=epl_p[:len(epkv)], y=epkv,
+            marker_color=COLOR_KOMP, text=np.round(epkv,2), textposition='outside'))
+        fig_ep.update_layout(barmode='group', yaxis_range=[3,6.8],
+            xaxis_tickangle=-20, height=360)
         st.plotly_chart(elite_layout(fig_ep), use_container_width=True)
 
-    with e2:
+    with ec2:
         st.markdown("<div class='section-header'>😠 Emosi Negatif</div>",
                     unsafe_allow_html=True)
-        fig_en = go.Figure()
-        fig_en.add_trace(go.Bar(
-            name='XYZ', x=emo_labels_neg[:len(emo_neg_xyz)], y=emo_neg_xyz,
-            marker_color=COLOR_XYZ, text=np.round(emo_neg_xyz, 2), textposition='outside'
-        ))
-        fig_en.add_trace(go.Bar(
-            name=target_komp, x=emo_labels_neg[:len(emo_neg_kom)], y=emo_neg_kom,
-            marker_color=COLOR_KOMP, text=np.round(emo_neg_kom, 2), textposition='outside'
-        ))
-        fig_en.update_layout(barmode='group', yaxis_range=[1, 4], height=380)
-        st.plotly_chart(elite_layout(fig_en,
-            "Makin Rendah = Makin Baik"), use_container_width=True)
+        fig_en2 = go.Figure()
+        fig_en2.add_trace(go.Bar(name='XYZ', x=epl_n[:len(env)], y=env,
+            marker_color=COLOR_XYZ, text=np.round(env,2), textposition='outside'))
+        fig_en2.add_trace(go.Bar(name=target_komp, x=epl_n[:len(enkv)], y=enkv,
+            marker_color=COLOR_KOMP, text=np.round(enkv,2), textposition='outside'))
+        fig_en2.update_layout(barmode='group', yaxis_range=[1,4],
+            xaxis_tickangle=-20, height=360)
+        st.plotly_chart(elite_layout(fig_en2,"↓ Makin Rendah Makin Baik"),
+            use_container_width=True)
 
     st.markdown("---")
 
-    # ── Brand Equity T_H1A_ ───────────────────────────────────────────
-    st.markdown("<div class='section-header'>💎 Brand Equity — 15 Atribut Loyalitas</div>",
+    # ── Brand Equity ──────────────────────────────────────────────────
+    st.markdown("<div class='section-header'>💎 Brand Equity — 15 Atribut</div>",
                 unsafe_allow_html=True)
-
-    h1a_xyz_cols = [c for c in ["T_H1A_2","T_H1A_5","T_H1A_8","T_H1A_11","T_H1A_14",
+    h_xc = [c for c in ["T_H1A_2","T_H1A_5","T_H1A_8","T_H1A_11","T_H1A_14",
         "T_H1A_17","T_H1A_20","T_H1A_23","T_H1A_26","T_H1A_29",
-        "T_H1A_32","T_H1A_35","T_H1A_38","T_H1A_41","T_H1A_44"]
-        if c in df.columns]
-    h1a_kom_cols = [c for c in ["T_H1A_3","T_H1A_6","T_H1A_9","T_H1A_12","T_H1A_15",
+        "T_H1A_32","T_H1A_35","T_H1A_38","T_H1A_41","T_H1A_44"] if c in df.columns]
+    h_kc = [c for c in ["T_H1A_3","T_H1A_6","T_H1A_9","T_H1A_12","T_H1A_15",
         "T_H1A_18","T_H1A_21","T_H1A_24","T_H1A_27","T_H1A_30",
         "T_H1A_33","T_H1A_36","T_H1A_39","T_H1A_42","T_H1A_45"]
         if c in df_has_komp.columns]
-    h1a_labels = [
-        "Tetap Gunakan","Kemudahan Transaksi","Digunakan Banyak Orang",
-        "Keuntungan Finansial","Produk Lengkap","Promo Gaya Hidup",
-        "Kecepatan Transaksi","Rasa Aman","Kenyamanan Fasilitas",
-        "Merasa Dihargai","Bangga","Up to Date/Modern",
-        "Bank Turun-Temurun","Cukup Satu Bank","Bergengsi"
-    ]
+    hlbl = ["Tetap Gunakan","Kemudahan Transaksi","Digunakan Banyak",
+            "Keuntungan Finansial","Produk Lengkap","Promo Gaya Hidup",
+            "Kecepatan","Rasa Aman","Kenyamanan","Merasa Dihargai",
+            "Bangga","Modern","Bank Turun-Temurun","Cukup Satu Bank","Bergengsi"]
+    hxv = [df[c].mean() for c in h_xc]
+    hkv = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan for c in h_kc]
+    lh  = hlbl[:min(len(hxv),len(hlbl))]
 
-    h_xyz = [df[c].mean() for c in h1a_xyz_cols]
-    h_kom = [df_has_komp[c].mean() if c in df_has_komp.columns else np.nan
-             for c in h1a_kom_cols]
-
-    labels_h = h1a_labels[:min(len(h_xyz), len(h1a_labels))]
-    fig_h1a = go.Figure()
-    fig_h1a.add_trace(go.Bar(
-        name='Bank XYZ', x=labels_h, y=h_xyz[:len(labels_h)],
-        marker_color=COLOR_XYZ, text=np.round(h_xyz[:len(labels_h)], 2),
-        textposition='outside'
-    ))
-    fig_h1a.add_trace(go.Bar(
-        name=target_komp, x=labels_h, y=h_kom[:len(labels_h)],
-        marker_color=COLOR_KOMP, text=np.round(h_kom[:len(labels_h)], 2),
-        textposition='outside'
-    ))
-    fig_h1a.update_layout(barmode='group', yaxis_range=[3, 6.8],
-                           xaxis_tickangle=-30, height=400)
-    st.plotly_chart(elite_layout(fig_h1a, "Brand Equity XYZ vs Kompetitor"),
+    fig_he = go.Figure()
+    fig_he.add_trace(go.Bar(name='Bank XYZ', x=lh, y=hxv[:len(lh)],
+        marker_color=COLOR_XYZ, text=np.round(hxv[:len(lh)],2), textposition='outside'))
+    fig_he.add_trace(go.Bar(name=target_komp, x=lh, y=hkv[:len(lh)],
+        marker_color=COLOR_KOMP, text=np.round(hkv[:len(lh)],2), textposition='outside'))
+    fig_he.update_layout(barmode='group', yaxis_range=[3,6.8],
+        xaxis_tickangle=-25, height=380)
+    st.plotly_chart(elite_layout(fig_he,"Brand Equity XYZ vs Kompetitor"),
         use_container_width=True)
 
-    # ── Korelasi emosi → outcome ──────────────────────────────────────
-    st.markdown("<div class='section-header'>📈 Korelasi: Emosi vs Outcome</div>",
+    # ── Korelasi & Scatter ────────────────────────────────────────────
+    st.markdown("<div class='section-header'>📈 Korelasi Emosi vs Outcome</div>",
                 unsafe_allow_html=True)
-    emo_pos_avg = df[[c for c in emo_pos_xyz_cols if c in df.columns]].mean(axis=1)
-    emo_neg_avg = df[[c for c in emo_neg_xyz_cols if c in df.columns]].mean(axis=1)
-    corr_emo = pd.DataFrame({
-        'Emosi Positif': emo_pos_avg,
-        'Emosi Negatif': emo_neg_avg,
-        'NPS':           df['G1A'],
-        'Kepuasan':      df['E1A'],
-        'Loyalitas':     df['F1A'],
-    }).corr()
-    fig_ec = px.imshow(corr_emo, text_auto=".2f",
-        color_continuous_scale='RdBu', aspect='auto', zmin=-1, zmax=1)
-    st.plotly_chart(elite_layout(fig_ec,
-        "Korelasi Emosi vs NPS, Kepuasan, Loyalitas"),
-        use_container_width=True)
+    ep_avg_s = df[[c for c in epc if c in df.columns]].mean(axis=1)
+    en_avg_s = df[[c for c in enc if c in df.columns]].mean(axis=1)
 
-    # Scatter emosi positif vs NPS
-    ec1, ec2 = st.columns(2)
-    with ec1:
-        scatter_df = df[['G1A','E1A','F1A','G1A_CAT']].copy()
-        scatter_df['Emosi Positif'] = emo_pos_avg
-        fig_sc_e = px.scatter(scatter_df, x='Emosi Positif', y='G1A',
-            color='G1A_CAT', color_discrete_map=NPS_COLORS,
-            trendline='ols', opacity=0.6,
-            labels={'G1A': 'Skor NPS'})
-        st.plotly_chart(elite_layout(fig_sc_e, "Emosi Positif vs NPS"),
+    cce = pd.DataFrame({'Emosi Pos':ep_avg_s,'Emosi Neg':en_avg_s,
+        'NPS':df['G1A'],'Kepuasan':df['E1A'],'Loyalitas':df['F1A']}).corr()
+    ec_corr_c, ec_sc1, ec_sc2 = st.columns(3)
+    with ec_corr_c:
+        fig_ec = px.imshow(cce, text_auto=".2f",
+            color_continuous_scale='RdBu', aspect='auto', zmin=-1, zmax=1)
+        st.plotly_chart(elite_layout(fig_ec, height=320), use_container_width=True)
+    with ec_sc1:
+        sc1df = df[['G1A','G1A_CAT']].copy()
+        sc1df['Emosi Pos'] = ep_avg_s
+        fig_sc1 = px.scatter(sc1df, x='Emosi Pos', y='G1A', color='G1A_CAT',
+            color_discrete_map=NPS_COLORS, trendline='ols', opacity=0.5,
+            labels={'G1A':'NPS'})
+        st.plotly_chart(elite_layout(fig_sc1,"Emosi Pos vs NPS",height=320),
             use_container_width=True)
-    with ec2:
-        fig_sc_e2 = px.scatter(scatter_df, x='Emosi Positif', y='F1A',
-            color='G1A_CAT', color_discrete_map=NPS_COLORS,
-            trendline='ols', opacity=0.6,
-            labels={'F1A': 'Loyalitas'})
-        st.plotly_chart(elite_layout(fig_sc_e2, "Emosi Positif vs Loyalitas"),
+    with ec_sc2:
+        sc2df = df[['F1A','G1A_CAT']].copy()
+        sc2df['Emosi Pos'] = ep_avg_s
+        fig_sc2 = px.scatter(sc2df, x='Emosi Pos', y='F1A', color='G1A_CAT',
+            color_discrete_map=NPS_COLORS, trendline='ols', opacity=0.5,
+            labels={'F1A':'Loyalitas'})
+        st.plotly_chart(elite_layout(fig_sc2,"Emosi Pos vs Loyalitas",height=320),
             use_container_width=True)
 
 # =====================================================================
 # TAB 6 — DIGITALISASI
 # =====================================================================
 with tab6:
-    st.markdown("<div class='section-header'>📱 Persepsi Digitalisasi Cabang</div>",
+    # KPI Digitalisasi
+    dc = [c for c in ["T_J1_1","T_J1_2","T_J1_3","T_J1_4","T_J1_5"] if c in df.columns]
+    dlbl = ["Digitalisasi","Digital Signage","Smart Table","Tablet Survey","Akses Cabang"]
+    dv = [df[c].mean() for c in dc]
+
+    st.markdown("<div class='section-header'>📱 KPI Digitalisasi</div>",
                 unsafe_allow_html=True)
-
-    dig_cols   = [c for c in ["T_J1_1","T_J1_2","T_J1_3","T_J1_4","T_J1_5"]
-                  if c in df.columns]
-    dig_labels = [
-        "Digitalisasi Layanan Cabang",
-        "Digital Signage",
-        "Smart Table",
-        "Tablet Survey",
-        "Akses Cabang"
-    ]
-    dig_vals = [df[c].mean() for c in dig_cols]
-
-    # KPI cards digitalisasi
-    dg_cols = st.columns(len(dig_cols))
-    for i, (col_w, label, val) in enumerate(zip(dg_cols, dig_labels, dig_vals)):
-        color = "green" if val >= 5.5 else ("amber" if val >= 4.5 else "red")
-        col_w.markdown(fmt_card(label, f"{val:.2f}", color, "Skala 1–6"),
-            unsafe_allow_html=True)
+    dk = st.columns(len(dc))
+    for i,(cw,lb,vl) in enumerate(zip(dk,dlbl,dv)):
+        col = "green" if vl>=5.5 else ("amber" if vl>=4.5 else "red")
+        cw.markdown(fmt_card(lb,f"{vl:.2f}",col,"Skala 1–6"), unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-
     dg1, dg2 = st.columns(2)
+
     with dg1:
-        fig_dig = px.bar(
-            x=dig_vals, y=dig_labels[:len(dig_vals)], orientation='h',
-            color=dig_vals, color_continuous_scale='Blues',
-            text=np.round(dig_vals, 2)
-        )
-        fig_dig.update_traces(textposition='outside')
-        fig_dig.update_xaxes(range=[3, 6.8])
-        st.plotly_chart(elite_layout(fig_dig, "Skor Persepsi Digitalisasi"),
+        fig_dg = px.bar(x=dv, y=dlbl[:len(dv)], orientation='h',
+            color=dv, color_continuous_scale='Blues', text=np.round(dv,2))
+        fig_dg.update_traces(textposition='outside')
+        fig_dg.update_xaxes(range=[3,6.8])
+        st.plotly_chart(elite_layout(fig_dg,"Skor Persepsi Digitalisasi"),
             use_container_width=True)
 
     with dg2:
-        # Digitalisasi per provinsi
-        dig_prov_col = "T_J1_1" if "T_J1_1" in df.columns else None
-        if dig_prov_col:
-            dig_prov = df.groupby('PROV')[dig_prov_col].mean().reset_index()
-            dig_prov.columns = ['Provinsi','Skor']
-            dig_prov = dig_prov.sort_values('Skor', ascending=True)
-            fig_dp = px.bar(dig_prov, x='Skor', y='Provinsi', orientation='h',
+        if "T_J1_1" in df.columns:
+            dp = df.groupby('PROV')["T_J1_1"].mean().reset_index()
+            dp.columns = ['Provinsi','Skor']
+            dp = dp.sort_values('Skor',ascending=True)
+            fig_dp = px.bar(dp, x='Skor', y='Provinsi', orientation='h',
                 color='Skor', color_continuous_scale='Blues', text='Skor')
             fig_dp.update_traces(texttemplate='%{x:.2f}', textposition='outside')
-            fig_dp.update_xaxes(range=[3, 6.8])
-            st.plotly_chart(elite_layout(fig_dp, "Digitalisasi per Provinsi"),
+            fig_dp.update_xaxes(range=[3,6.8])
+            st.plotly_chart(elite_layout(fig_dp,"Digitalisasi per Provinsi"),
                 use_container_width=True)
 
     st.markdown("---")
 
-    # ── Sarana elektronik ─────────────────────────────────────────────
-    st.markdown("<div class='section-header'>🖥️ Ketersediaan & Fungsi Sarana Elektronik</div>",
+    # ── Sarana Elektronik ─────────────────────────────────────────────
+    st.markdown("<div class='section-header'>🖥️ Sarana Elektronik Layanan</div>",
                 unsafe_allow_html=True)
-
-    sl_cols   = [f"T_SL2_{i}" for i in range(1,17) if f"T_SL2_{i}" in df.columns]
-    sl_labels = [short_label(c, col_map) for c in sl_cols]
-    sl_vals   = [df[c].mean() for c in sl_cols]
+    slc  = [f"T_SL2_{i}" for i in range(1,17) if f"T_SL2_{i}" in df.columns]
+    sllb = [short_label(c,col_map) for c in slc]
+    slv  = [df[c].mean() for c in slc]
 
     sl1, sl2 = st.columns(2)
     with sl1:
-        fig_sl = px.bar(x=sl_vals, y=sl_labels[:len(sl_vals)], orientation='h',
-            color=sl_vals, color_continuous_scale='Teal', text=np.round(sl_vals, 2))
+        fig_sl = px.bar(x=slv, y=sllb[:len(slv)], orientation='h',
+            color=slv, color_continuous_scale='Teal', text=np.round(slv,2))
         fig_sl.update_traces(textposition='outside')
-        fig_sl.update_xaxes(range=[3, 6.8])
-        st.plotly_chart(elite_layout(fig_sl, "Skor Sarana Elektronik Layanan"),
+        fig_sl.update_xaxes(range=[3,6.8])
+        st.plotly_chart(elite_layout(fig_sl,"Ketersediaan & Fungsi Sarana"),
             use_container_width=True)
 
     with sl2:
-        # Scatter: Digitalisasi vs Kepuasan
         if "T_J1_1" in df.columns:
-            sc_dig = df[['T_J1_1','E1A','G1A','G1A_CAT']].dropna()
-            fig_dig_sat = px.scatter(sc_dig, x='T_J1_1', y='E1A',
-                color='G1A_CAT', color_discrete_map=NPS_COLORS,
-                trendline='ols', opacity=0.6,
-                labels={'T_J1_1': 'Persepsi Digitalisasi', 'E1A': 'Kepuasan Overall'})
-            st.plotly_chart(elite_layout(fig_dig_sat,
-                "Korelasi: Persepsi Digitalisasi vs Kepuasan"),
+            scd = df[['T_J1_1','E1A','G1A_CAT']].dropna()
+            fig_ds = px.scatter(scd, x='T_J1_1', y='E1A', color='G1A_CAT',
+                color_discrete_map=NPS_COLORS, trendline='ols', opacity=0.5,
+                labels={'T_J1_1':'Persepsi Digitalisasi','E1A':'Kepuasan'})
+            st.plotly_chart(elite_layout(fig_ds,"Digitalisasi vs Kepuasan"),
                 use_container_width=True)
 
-    # ── E-form adoption ───────────────────────────────────────────────
-    st.markdown("<div class='section-header'>📋 Adopsi E-Form Pembukaan Rekening</div>",
+    # ── E-form ────────────────────────────────────────────────────────
+    st.markdown("<div class='section-header'>📋 E-Form & Awareness</div>",
                 unsafe_allow_html=True)
     ef1, ef2 = st.columns(2)
-
     with ef1:
         if 'D2' in df.columns:
-            eform = df['D2'].dropna().value_counts().reset_index()
-            eform.columns = ['Status','Jumlah']
-            fig_ef = px.pie(eform, values='Jumlah', names='Status', hole=0.55,
-                color_discrete_sequence=['#8B5CF6','#D946EF','#F43F5E'])
-            st.plotly_chart(elite_layout(fig_ef, "Status Penggunaan E-Form"),
+            ef = df['D2'].dropna().value_counts().reset_index()
+            ef.columns = ['Status','Jumlah']
+            fig_ef = px.pie(ef, values='Jumlah', names='Status', hole=0.55,
+                color_discrete_sequence=['#8B5CF6','#3B82F6','#F43F5E'])
+            st.plotly_chart(elite_layout(fig_ef,"Penggunaan E-Form"),
                 use_container_width=True)
-
     with ef2:
         if 'D4' in df.columns:
-            eform_aware = df['D4'].dropna().value_counts().reset_index()
-            eform_aware.columns = ['Status','Jumlah']
-            fig_ea = px.bar(eform_aware, x='Jumlah', y='Status', orientation='h',
+            ea = df['D4'].dropna().value_counts().reset_index()
+            ea.columns = ['Status','Jumlah']
+            fig_ea = px.bar(ea, x='Jumlah', y='Status', orientation='h',
                 color_discrete_sequence=['#0EA5E9'], text='Jumlah')
             fig_ea.update_traces(textposition='outside')
-            st.plotly_chart(elite_layout(fig_ea, "Awareness E-Form"),
+            st.plotly_chart(elite_layout(fig_ea,"Awareness E-Form"),
                 use_container_width=True)
 
-    # Saran perbaikan digitalisasi
-    st.markdown("<div class='section-header'>📝 Saran Perbaikan Digitalisasi</div>",
+    # ── Saran Perbaikan ───────────────────────────────────────────────
+    st.markdown("<div class='section-header'>📝 Saran Perbaikan</div>",
                 unsafe_allow_html=True)
-    j2_map = {
-        "T_J2_1": "Digitalisasi Layanan",
-        "T_J2_2": "Digital Signage",
-        "T_J2_3": "Smart Table",
-        "T_J2_4": "Tablet Survey",
-        "T_J2_5": "Akses Cabang"
-    }
-    sel_j2_label = st.selectbox("Topik saran:", list(j2_map.values()))
-    sel_j2_col   = [k for k,v in j2_map.items() if v == sel_j2_label][0]
-    if sel_j2_col in df.columns:
-        saran = df[sel_j2_col].dropna().value_counts().reset_index()
-        saran.columns = ['Saran','Jumlah']
-        saran = saran[saran['Saran'].str.strip() != '']
-        if len(saran) > 0:
-            st.dataframe(saran, use_container_width=True, hide_index=True, height=200)
+    j2m = {"T_J2_1":"Digitalisasi Layanan","T_J2_2":"Digital Signage",
+           "T_J2_3":"Smart Table","T_J2_4":"Tablet Survey","T_J2_5":"Akses Cabang"}
+    j2l = st.selectbox("Topik:", list(j2m.values()))
+    j2c = [k for k,v in j2m.items() if v==j2l][0]
+    if j2c in df.columns:
+        sr = df[j2c].dropna().value_counts().reset_index()
+        sr.columns = ['Saran','Jumlah']
+        sr = sr[sr['Saran'].str.strip().isin(['','None','Tidak Ada',
+            'Tidak Ada /  Tidak Tahu']) == False]
+        if len(sr) > 0:
+            st.dataframe(sr, use_container_width=True, hide_index=True, height=200)
 
 # =====================================================================
 # TAB 7 — PROFIL & SEGMENTASI
 # =====================================================================
 with tab7:
+    # Demografi
     st.markdown("<div class='section-header'>👥 Profil Demografis</div>",
                 unsafe_allow_html=True)
+    d1,d2,d3,d4 = st.columns(4)
+    with d1:
+        fig_gn = px.pie(df, names='S1', hole=0.55,
+            color_discrete_sequence=[COLOR_XYZ,'#60A5FA'])
+        st.plotly_chart(elite_layout(fig_gn,"Gender"), use_container_width=True)
+    with d2:
+        ac = df['S2_2'].value_counts().reset_index()
+        ac.columns = ['Usia','N']
+        fig_ag = px.bar(ac, x='Usia', y='N', color_discrete_sequence=[COLOR_XYZ], text='N')
+        fig_ag.update_traces(textposition='outside')
+        fig_ag.update_layout(xaxis_tickangle=-20)
+        st.plotly_chart(elite_layout(fig_ag,"Usia"), use_container_width=True)
+    with d3:
+        ec = df['P3'].value_counts().reset_index()
+        ec.columns = ['Pend','N']
+        fig_ed = px.bar(ec, x='N', y='Pend', orientation='h',
+            color_discrete_sequence=[COLOR_XYZ], text='N')
+        fig_ed.update_traces(textposition='outside')
+        st.plotly_chart(elite_layout(fig_ed,"Pendidikan"), use_container_width=True)
+    with d4:
+        jc = df['P4'].value_counts().reset_index()
+        jc.columns = ['Pekerjaan','N']
+        fig_jb = px.bar(jc, x='N', y='Pekerjaan', orientation='h',
+            color_discrete_sequence=['#8B5CF6'], text='N')
+        fig_jb.update_traces(textposition='outside')
+        st.plotly_chart(elite_layout(fig_jb,"Pekerjaan"), use_container_width=True)
 
-    d1c, d2c, d3c, d4c = st.columns(4)
-    with d1c:
-        fig_g = px.pie(df, names='S1', hole=0.55,
-            color_discrete_sequence=[COLOR_XYZ, '#60A5FA'])
-        st.plotly_chart(elite_layout(fig_g, "Gender"), use_container_width=True)
-    with d2c:
-        age_c = df['S2_2'].value_counts().reset_index()
-        age_c.columns = ['Usia','Jumlah']
-        fig_a = px.bar(age_c, x='Usia', y='Jumlah',
-            color_discrete_sequence=[COLOR_XYZ], text='Jumlah')
-        fig_a.update_traces(textposition='outside')
-        fig_a.update_layout(xaxis_tickangle=-30)
-        st.plotly_chart(elite_layout(fig_a, "Kelompok Usia"), use_container_width=True)
-    with d3c:
-        edu_c = df['P3'].value_counts().reset_index()
-        edu_c.columns = ['Pendidikan','Jumlah']
-        fig_e = px.bar(edu_c, x='Jumlah', y='Pendidikan', orientation='h',
-            color_discrete_sequence=[COLOR_XYZ], text='Jumlah')
-        fig_e.update_traces(textposition='outside')
-        st.plotly_chart(elite_layout(fig_e, "Pendidikan"), use_container_width=True)
-    with d4c:
-        job_c = df['P4'].value_counts().reset_index()
-        job_c.columns = ['Pekerjaan','Jumlah']
-        fig_j = px.bar(job_c, x='Jumlah', y='Pekerjaan', orientation='h',
-            color_discrete_sequence=['#8B5CF6'], text='Jumlah')
-        fig_j.update_traces(textposition='outside')
-        st.plotly_chart(elite_layout(fig_j, "Pekerjaan"), use_container_width=True)
-
-    # ── SES & Penghasilan ─────────────────────────────────────────────
-    ses1, ses2 = st.columns(2)
-    with ses1:
-        ses_c = df['P5'].value_counts().reset_index()
-        ses_c.columns = ['SES','Jumlah']
-        fig_ses = px.bar(ses_c, x='Jumlah', y='SES', orientation='h',
-            color_discrete_sequence=[COLOR_XYZ], text='Jumlah')
-        fig_ses.update_traces(textposition='outside')
-        st.plotly_chart(elite_layout(fig_ses, "Tingkat Pengeluaran (SES)"),
+    # SES
+    ss1, ss2 = st.columns(2)
+    with ss1:
+        sc = df['P5'].value_counts().reset_index()
+        sc.columns = ['SES','N']
+        fig_ss = px.bar(sc, x='N', y='SES', orientation='h',
+            color_discrete_sequence=[COLOR_XYZ], text='N')
+        fig_ss.update_traces(textposition='outside')
+        st.plotly_chart(elite_layout(fig_ss,"Tingkat Pengeluaran (SES)"),
             use_container_width=True)
-    with ses2:
-        inc_c = df['P6'].value_counts().reset_index()
-        inc_c.columns = ['Penghasilan','Jumlah']
-        fig_inc = px.bar(inc_c, x='Jumlah', y='Penghasilan', orientation='h',
-            color_discrete_sequence=['#10B981'], text='Jumlah')
-        fig_inc.update_traces(textposition='outside')
-        st.plotly_chart(elite_layout(fig_inc, "Distribusi Penghasilan Rumah Tangga"),
+    with ss2:
+        ic = df['P6'].value_counts().reset_index()
+        ic.columns = ['Penghasilan','N']
+        fig_ic = px.bar(ic, x='N', y='Penghasilan', orientation='h',
+            color_discrete_sequence=['#10B981'], text='N')
+        fig_ic.update_traces(textposition='outside')
+        st.plotly_chart(elite_layout(fig_ic,"Distribusi Penghasilan"),
             use_container_width=True)
 
-    # ── Treemap geografis ─────────────────────────────────────────────
+    # ── Treemap ───────────────────────────────────────────────────────
     st.markdown("<div class='section-header'>🗺️ Peta Geografis</div>",
                 unsafe_allow_html=True)
-    geo_df = df.groupby(['PROV','KABKOTA','CABANG']).agg(
-        Jumlah=('SERIAL','count'),
-        NPS=('G1A','mean'),
-        Kepuasan=('E1A','mean'),
-        Loyalitas=('F1A','mean')
+    geo = df.groupby(['PROV','KABKOTA','CABANG']).agg(
+        N=('SERIAL','count'), NPS=('G1A','mean'),
+        Kepuasan=('E1A','mean'), Loyalitas=('F1A','mean')
     ).reset_index()
-
-    color_metric = st.selectbox(
-        "Warna berdasarkan:",
-        ['NPS','Kepuasan','Loyalitas','Jumlah']
-    )
-    fig_tree = px.treemap(geo_df,
+    cm_sel = st.selectbox("Warna berdasarkan:",['NPS','Kepuasan','Loyalitas','N'])
+    fig_tr = px.treemap(geo,
         path=[px.Constant("Nasional"),'PROV','KABKOTA','CABANG'],
-        values='Jumlah', color=color_metric,
-        color_continuous_scale='RdYlGn',
+        values='N', color=cm_sel, color_continuous_scale='RdYlGn',
         hover_data={'NPS':':.2f','Kepuasan':':.2f','Loyalitas':':.2f'})
-    fig_tree.update_layout(height=500)
-    st.plotly_chart(elite_layout(fig_tree,
-        f"Treemap Geografis (Warna = {color_metric})"),
+    fig_tr.update_layout(height=500)
+    st.plotly_chart(elite_layout(fig_tr,f"Treemap (Warna={cm_sel})"),
         use_container_width=True)
 
-    st.markdown("---")
-
-    # ── Cross-tab segmentasi interaktif ──────────────────────────────
+    # ── Segmentasi Interaktif ─────────────────────────────────────────
     st.markdown("<div class='section-header'>🔀 Segmentasi Interaktif</div>",
                 unsafe_allow_html=True)
-
-    seg_c1, seg_c2, seg_c3 = st.columns(3)
-    with seg_c1:
-        seg_by = st.selectbox("Segmentasi by:", [
-            'S1 → Gender', 'S2_2 → Usia', 'S4 → Tenure',
-            'S7 → Frekuensi Transaksi', 'P3 → Pendidikan',
-            'P4 → Pekerjaan', 'P1 → Status Nikah',
-            'P5 → SES Pengeluaran'
+    sg1,sg2,sg3 = st.columns(3)
+    with sg1:
+        seg_by = st.selectbox("Segmen by:", [
+            'S1 → Gender','S2_2 → Usia','S4 → Tenure',
+            'S7 → Frekuensi','P3 → Pendidikan',
+            'P4 → Pekerjaan','P1 → Status Nikah','P5 → SES'
         ])
-    with seg_c2:
-        seg_metric = st.selectbox("Metrik:", [
-            'G1A → NPS', 'E1A → Kepuasan', 'F1A → Loyalitas',
-            'OVR_TELLER_XYZ → Teller', 'OVR_CS_XYZ → CS',
-            'OVR_ATM_XYZ → ATM', 'OVR_SEKURITI_XYZ → Sekuriti',
+    with sg2:
+        seg_met = st.selectbox("Metrik:", [
+            'G1A → NPS','E1A → Kepuasan','F1A → Loyalitas',
+            'OVR_TELLER_XYZ → Teller','OVR_CS_XYZ → CS',
+            'OVR_ATM_XYZ → ATM','OVR_SEKURITI_XYZ → Sekuriti',
             'OVR_KC_XYZ → Kantor Cabang'
         ])
-    with seg_c3:
-        seg_chart = st.radio("Tipe chart:", ["Bar","Box"], horizontal=True)
+    with sg3:
+        seg_ct = st.radio("Chart:", ["Bar","Box"], horizontal=True)
 
-    seg_key  = seg_by.split(' → ')[0].strip()
-    metr_key = seg_metric.split(' → ')[0].strip()
+    sk = seg_by.split(' → ')[0].strip()
+    mk = seg_met.split(' → ')[0].strip()
 
-    if seg_key in df.columns and metr_key in df.columns:
-        if seg_chart == "Bar":
-            seg_agg = df.groupby(seg_key)[metr_key].mean().reset_index()
-            seg_agg.columns = ['Segmen','Nilai']
-            seg_agg = seg_agg.sort_values('Nilai', ascending=True)
-            fig_seg = px.bar(seg_agg, x='Nilai', y='Segmen', orientation='h',
+    if sk in df.columns and mk in df.columns:
+        if seg_ct == "Bar":
+            sa = df.groupby(sk)[mk].mean().reset_index()
+            sa.columns = ['Segmen','Nilai']
+            sa = sa.sort_values('Nilai', ascending=True)
+            fig_sg = px.bar(sa, x='Nilai', y='Segmen', orientation='h',
                 color='Nilai', color_continuous_scale='Blues', text='Nilai')
-            fig_seg.update_traces(texttemplate='%{x:.2f}', textposition='outside')
+            fig_sg.update_traces(texttemplate='%{x:.2f}', textposition='outside')
         else:
-            fig_seg = px.box(df, x=seg_key, y=metr_key, color=seg_key,
-                points='outliers')
-            fig_seg.update_layout(xaxis_tickangle=-30)
+            fig_sg = px.box(df, x=sk, y=mk, color=sk, points='outliers')
+            fig_sg.update_layout(xaxis_tickangle=-20)
+        st.plotly_chart(elite_layout(fig_sg,
+            f"{seg_met.split('→')[1]} per {seg_by.split('→')[1]}", height=400),
+            use_container_width=True)
 
-        st.plotly_chart(
-            elite_layout(fig_seg, f"{seg_metric.split('→')[1]} per {seg_by.split('→')[1]}",
-                height=420),
-            use_container_width=True
-        )
-
-    st.markdown("---")
-
-    # ── Frekuensi transaksi vs outcome ────────────────────────────────
+    # ── Frekuensi vs Outcome ──────────────────────────────────────────
     st.markdown("<div class='section-header'>🔄 Frekuensi Transaksi vs Outcome</div>",
                 unsafe_allow_html=True)
-    freq_df = df.groupby('S7').agg(
+    fr = df.groupby('S7').agg(
         NPS=('G1A','mean'), Kepuasan=('E1A','mean'), Loyalitas=('F1A','mean'),
         Count=('SERIAL','count')
     ).reset_index()
-    fig_freq = go.Figure()
-    for col_freq, col_color, label_f in [
-        ('NPS', COLOR_XYZ, 'NPS'),
-        ('Kepuasan', '#10B981', 'Kepuasan'),
-        ('Loyalitas', '#F59E0B', 'Loyalitas')
-    ]:
-        fig_freq.add_trace(go.Bar(
-            name=label_f, x=freq_df['S7'], y=freq_df[col_freq],
-            marker_color=col_color, text=freq_df[col_freq].round(2),
-            textposition='outside'
-        ))
-    fig_freq.update_layout(barmode='group', xaxis_tickangle=-20, height=380)
-    st.plotly_chart(elite_layout(fig_freq,
-        "Frekuensi Transaksi vs NPS, Kepuasan, Loyalitas"),
+    fig_fr = go.Figure()
+    for cn,cc,nl in [('NPS',COLOR_XYZ,'NPS'),('Kepuasan','#34D399','Kepuasan'),
+                     ('Loyalitas','#FBBF24','Loyalitas')]:
+        fig_fr.add_trace(go.Bar(name=nl, x=fr['S7'], y=fr[cn],
+            marker_color=cc, text=fr[cn].round(2), textposition='outside'))
+    fig_fr.update_layout(barmode='group', xaxis_tickangle=-15, height=360)
+    st.plotly_chart(elite_layout(fig_fr,"Frekuensi Transaksi vs Outcome"),
         use_container_width=True)
 
-    # ── Tujuan buka rekening vs loyalitas ────────────────────────────
+    # ── Tujuan Rekening ───────────────────────────────────────────────
     st.markdown("<div class='section-header'>🎯 Tujuan Buka Rekening vs Loyalitas</div>",
                 unsafe_allow_html=True)
-    tujuan_series = df['A2'].dropna().str.split(';').explode().str.strip()
-    tujuan_df     = tujuan_series.to_frame('Tujuan').join(df['F1A'], how='left')
-    tujuan_agg    = tujuan_df.groupby('Tujuan').agg(
+    tj = df['A2'].dropna().str.split(';').explode().str.strip()
+    tjdf = tj.to_frame('Tujuan').join(df['F1A'],how='left')
+    tjagg = tjdf.groupby('Tujuan').agg(
         Loyalitas=('F1A','mean'), Count=('F1A','count')
-    ).reset_index().sort_values('Loyalitas')
-    tujuan_agg    = tujuan_agg[tujuan_agg['Count'] >= 10]
-    fig_tujuan    = px.bar(tujuan_agg, x='Loyalitas', y='Tujuan',
-        orientation='h', color='Count', color_continuous_scale='Blues',
-        text='Loyalitas', hover_data=['Count'])
-    fig_tujuan.update_traces(texttemplate='%{x:.2f}', textposition='outside')
-    fig_tujuan.update_xaxes(range=[4.5, 6.3])
-    st.plotly_chart(elite_layout(fig_tujuan,
-        "Rata-rata Loyalitas per Tujuan Membuka Rekening"),
+    ).reset_index()
+    tjagg = tjagg[tjagg['Count']>=10].sort_values('Loyalitas')
+    fig_tj = px.bar(tjagg, x='Loyalitas', y='Tujuan', orientation='h',
+        color='Count', color_continuous_scale='Blues', text='Loyalitas',
+        hover_data=['Count'])
+    fig_tj.update_traces(texttemplate='%{x:.2f}', textposition='outside')
+    fig_tj.update_xaxes(range=[4.5,6.4])
+    st.plotly_chart(elite_layout(fig_tj,"Loyalitas per Tujuan Buka Rekening"),
         use_container_width=True)
 
 # =====================================================================
 # TAB 8 — VOICE OF CUSTOMER
 # =====================================================================
 with tab8:
-    # ── KPI VoC ───────────────────────────────────────────────────────
-    st.markdown("<div class='section-header'>💬 Voice of Customer Overview</div>",
-                unsafe_allow_html=True)
-
-    nps_v, pp_v, pasv_v, det_v = calc_nps(df['G1A_CAT'])
-    v_k1, v_k2, v_k3, v_k4 = st.columns(4)
-    v_k1.markdown(fmt_card("NPS Score XYZ", f"{nps_v:.0f}", "blue",
-        f"{len(df[df['G1A_CAT']=='Promoter'])} Promoter"), unsafe_allow_html=True)
-    v_k2.markdown(fmt_card("Promoter %", f"{pp_v:.0f}%", "green",
-        "Pasti merekomendasikan"), unsafe_allow_html=True)
-    v_k3.markdown(fmt_card("Passive %", f"{pasv_v:.0f}%", "amber",
+    # KPI VoC
+    nv,ppv,pasvv,dv2 = calc_nps(df['G1A_CAT'])
+    vk = st.columns(4)
+    vk[0].markdown(fmt_card("NPS Score", f"{nv:.0f}", "blue",
+        f"{df['G1A_CAT'].eq('Promoter').sum()} promoter"), unsafe_allow_html=True)
+    vk[1].markdown(fmt_card("Promoter %", f"{ppv:.0f}%", "green",
+        "Pasti rekomendasikan"), unsafe_allow_html=True)
+    vk[2].markdown(fmt_card("Passive %", f"{pasvv:.0f}%", "amber",
         "Netral"), unsafe_allow_html=True)
-    v_k4.markdown(fmt_card("Detractor %", f"{det_v:.0f}%", "red",
-        "Tidak merekomendasikan"), unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
+    vk[3].markdown(fmt_card("Detractor %", f"{dv2:.0f}%", "red",
+        "Tidak rekomendasikan"), unsafe_allow_html=True)
 
     # ── Distribusi NPS ────────────────────────────────────────────────
-    voc1, voc2 = st.columns(2)
-    with voc1:
+    vh1, vh2 = st.columns(2)
+    with vh1:
         fig_nh = px.histogram(df, x='G1A', nbins=11,
             color='G1A_CAT', color_discrete_map=NPS_COLORS,
-            labels={'G1A': 'Skor NPS XYZ'})
+            labels={'G1A':'Skor NPS XYZ'})
         fig_nh.update_layout(bargap=0.1)
-        st.plotly_chart(elite_layout(fig_nh, "Distribusi Skor NPS XYZ"),
+        st.plotly_chart(elite_layout(fig_nh,"Distribusi NPS XYZ"),
             use_container_width=True)
-    with voc2:
-        if len(df_has_komp) > 0:
+    with vh2:
+        if len(df_has_komp)>0:
             fig_nhk = px.histogram(df_has_komp, x='G1C', nbins=11,
                 color='G1C_CAT', color_discrete_map=NPS_COLORS,
-                labels={'G1C': f'Skor NPS {target_komp}'})
+                labels={'G1C':f'NPS {target_komp}'})
             fig_nhk.update_layout(bargap=0.1)
-            st.plotly_chart(elite_layout(fig_nhk,
-                f"Distribusi Skor NPS {target_komp}"),
+            st.plotly_chart(elite_layout(fig_nhk,f"Distribusi NPS {target_komp}"),
                 use_container_width=True)
 
     st.markdown("---")
 
-    # ── Filter & Wordcloud ────────────────────────────────────────────
-    st.markdown("<div class='section-header'>☁️ Analisis Teks & Wordcloud</div>",
+    # ── Wordcloud & Keyword ───────────────────────────────────────────
+    st.markdown("<div class='section-header'>☁️ Analisis Teks</div>",
                 unsafe_allow_html=True)
+    wcf1, wcf2, wcf3 = st.columns(3)
+    with wcf1:
+        fcat = st.selectbox("Filter NPS:",["Semua","Promoter","Passive","Detractor"])
+    with wcf2:
+        wsrc = st.selectbox("Sumber:", [
+            "G1B — Alasan NPS XYZ",
+            "G1D — Alasan NPS Kompetitor",
+            "E1AA — Alasan Kepuasan XYZ",
+            "E1BB — Alasan Kepuasan Komp"
+        ])
+    with wcf3:
+        mwl = st.slider("Min. panjang kata:", 3, 7, 4)
 
-    wc_f1, wc_f2, wc_f3 = st.columns(3)
-    with wc_f1:
-        filter_cat = st.selectbox(
-            "Filter Kategori NPS:",
-            ["Semua", "Promoter", "Passive", "Detractor"]
-        )
-    with wc_f2:
-        wc_source = st.selectbox(
-            "Sumber teks:",
-            ["G1B (Alasan NPS XYZ)", "G1D (Alasan NPS Kompetitor)",
-             "E1AA (Alasan Kepuasan XYZ)", "E1BB (Alasan Kepuasan Komp)"]
-        )
-    with wc_f3:
-        min_word_len = st.slider("Min. panjang kata:", 3, 7, 4)
-
-    col_wc_map = {
-        "G1B (Alasan NPS XYZ)":       ("G1B",  "G1A_CAT"),
-        "G1D (Alasan NPS Kompetitor)": ("G1D",  "G1C_CAT"),
-        "E1AA (Alasan Kepuasan XYZ)":  ("E1AA", "G1A_CAT"),
-        "E1BB (Alasan Kepuasan Komp)": ("E1BB", "G1C_CAT"),
+    cmap_dict = {
+        "G1B — Alasan NPS XYZ":       ("G1B","G1A_CAT", df),
+        "G1D — Alasan NPS Kompetitor": ("G1D","G1C_CAT", df_has_komp),
+        "E1AA — Alasan Kepuasan XYZ":  ("E1AA","G1A_CAT", df),
+        "E1BB — Alasan Kepuasan Komp": ("E1BB","G1C_CAT", df_has_komp),
     }
-    text_col, cat_col = col_wc_map[wc_source]
-    df_wc_src = df_has_komp if "Kompetitor" in wc_source else df
-    df_wc = df_wc_src if filter_cat == "Semua" \
-            else df_wc_src[df_wc_src[cat_col] == filter_cat] \
-            if cat_col in df_wc_src.columns else df_wc_src
+    tcol, cacat, dfsrc = cmap_dict[wsrc]
+    dfwc = dfsrc if fcat=="Semua" \
+           else dfsrc[dfsrc[cacat]==fcat] if cacat in dfsrc.columns else dfsrc
 
-    stopwords_id = {
-        'yang','untuk','dengan','pada','dari','sebagai','tidak','karena',
-        'sangat','lebih','sudah','saya','bank','bisa','dan','di','ke','ini',
-        'itu','ada','juga','net','subnet','positive','negative','comments',
-        'dalam','oleh','akan','telah','dapat','kami','anda','nya','atau',
-        'jadi','baru','lagi','saat','pernah','masih','serta','yaitu','namun',
-        'jika','agar','bagi','atas','antara','setiap','para','mereka','kita',
-        'xyz','bank','nasabah','layanan','cabang','rekening'
-    }
+    def make_wc(series, cmap_name='Blues', mw=80):
+        # Parse komentar dulu
+        parsed = clean_comments(series)
+        text = " ".join(parsed.astype(str).tolist()).lower()
+        words = re.findall(rf'\b[a-zA-Z]{{{mwl},}}\b', text)
+        wc_words = [w for w in words if w not in stopwords_id]
+        if len(wc_words) < 5: return None, []
+        wobj = WordCloud(width=700, height=350, background_color='#0F172A',
+            colormap=cmap_name, max_words=mw, stopwords=stopwords_id,
+            prefer_horizontal=0.8).generate(" ".join(wc_words))
+        return wobj, Counter(wc_words).most_common(10)
 
-    def make_wordcloud(series, cmap='Blues', max_w=80):
-        text = " ".join(series.dropna().astype(str).tolist()).lower()
-        words = re.findall(rf'\b[a-zA-Z]{{{min_word_len},}}\b', text)
-        words_c = [w for w in words if w not in stopwords_id]
-        if len(words_c) < 5:
-            return None, None
-        wc = WordCloud(width=700, height=350, background_color='#F8FAFC',
-            colormap=cmap, max_words=max_w, stopwords=stopwords_id).generate(
-            " ".join(words_c))
-        top_words = Counter(words_c).most_common(10)
-        return wc, top_words
-
-    wc_im, top_w = make_wordcloud(
-        df_wc[text_col] if text_col in df_wc.columns else pd.Series(dtype=str)
+    wc_obj, top_kw = make_wc(
+        dfwc[tcol] if tcol in dfwc.columns else pd.Series(dtype=str)
     )
 
-    wc_col1, wc_col2 = st.columns([1.6, 1])
-    with wc_col1:
-        if wc_im:
-            fig_wc, ax = plt.subplots(figsize=(7, 3.5))
-            ax.imshow(wc_im, interpolation='bilinear')
+    wcc1, wcc2 = st.columns([1.6,1])
+    with wcc1:
+        if wc_obj:
+            fig_wc, ax = plt.subplots(figsize=(7,3.5),
+                facecolor='#0F172A')
+            ax.imshow(wc_obj, interpolation='bilinear')
             ax.axis('off')
-            fig_wc.patch.set_facecolor('#F8FAFC')
             fig_wc.tight_layout(pad=0)
             st.pyplot(fig_wc)
             plt.close()
         else:
-            st.info("Tidak ada teks yang cukup untuk wordcloud.")
+            st.info("Tidak ada teks yang cukup.")
 
-    with wc_col2:
-        if top_w:
-            st.markdown("**🔑 Top 10 Kata Kunci:**")
-            kw_df = pd.DataFrame(top_w, columns=['Kata','Frekuensi'])
-            fig_kw = px.bar(kw_df.sort_values('Frekuensi'),
-                x='Frekuensi', y='Kata', orientation='h',
-                color='Frekuensi', color_continuous_scale='Blues',
-                text='Frekuensi')
+    with wcc2:
+        if top_kw:
+            kdf = pd.DataFrame(top_kw, columns=['Kata','Frekuensi'])
+            fig_kw = px.bar(kdf.sort_values('Frekuensi'), x='Frekuensi', y='Kata',
+                orientation='h', color='Frekuensi',
+                color_continuous_scale='Blues', text='Frekuensi')
             fig_kw.update_traces(textposition='outside')
-            fig_kw.update_layout(height=350, showlegend=False)
-            st.plotly_chart(elite_layout(fig_kw), use_container_width=True)
+            fig_kw.update_layout(height=340, showlegend=False)
+            st.plotly_chart(elite_layout(fig_kw,"Top 10 Kata Kunci"),
+                use_container_width=True)
 
     st.markdown("---")
 
-    # ── Top 3 Promoter / Detractor ────────────────────────────────────
-    st.markdown("<div class='section-header'>💡 Top Alasan Promoter & Detractor</div>",
+    # ── Top tema Promoter vs Detractor ───────────────────────────────
+    st.markdown("<div class='section-header'>💡 Tema Utama: Promoter vs Detractor</div>",
                 unsafe_allow_html=True)
     pa1, pa2 = st.columns(2)
 
-    def top_themes(df_src, text_col_t, cat, n=8):
-        text = " ".join(
-            df_src[df_src['G1A_CAT'] == cat][text_col_t].dropna().astype(str).tolist()
-        ).lower()
+    def top_theme(series, n=8):
+        parsed = clean_comments(series)
+        text = " ".join(parsed.astype(str).tolist()).lower()
         words = re.findall(r'\b[a-zA-Z]{4,}\b', text)
-        words_c = [w for w in words if w not in stopwords_id]
-        return Counter(words_c).most_common(n)
+        wc = [w for w in words if w not in stopwords_id]
+        return Counter(wc).most_common(n)
 
     with pa1:
-        st.markdown("**🌟 Promoter — Top Tema**")
-        prom_words = top_themes(df, 'G1B', 'Promoter')
-        if prom_words:
-            prom_df = pd.DataFrame(prom_words, columns=['Tema','Count'])
-            fig_p = px.bar(prom_df, x='Count', y='Tema', orientation='h',
-                color_discrete_sequence=['#10B981'], text='Count')
+        st.markdown("<span style='color:#34D399;font-weight:700;'>🌟 Promoter</span>",
+                    unsafe_allow_html=True)
+        pw = top_theme(df[df['G1A_CAT']=='Promoter']['G1B'])
+        if pw:
+            pdf = pd.DataFrame(pw, columns=['Tema','Count'])
+            fig_p = px.bar(pdf, x='Count', y='Tema', orientation='h',
+                color_discrete_sequence=['#34D399'], text='Count')
             fig_p.update_traces(textposition='outside')
             fig_p.update_layout(height=320)
             st.plotly_chart(elite_layout(fig_p), use_container_width=True)
 
     with pa2:
-        st.markdown("**⚠️ Detractor — Top Tema**")
-        det_words = top_themes(df, 'G1B', 'Detractor')
-        if det_words:
-            det_df = pd.DataFrame(det_words, columns=['Tema','Count'])
-            fig_d = px.bar(det_df, x='Count', y='Tema', orientation='h',
+        st.markdown("<span style='color:#F87171;font-weight:700;'>⚠️ Detractor</span>",
+                    unsafe_allow_html=True)
+        dw = top_theme(df[df['G1A_CAT']=='Detractor']['G1B'])
+        if dw:
+            ddf2 = pd.DataFrame(dw, columns=['Tema','Count'])
+            fig_d2 = px.bar(ddf2, x='Count', y='Tema', orientation='h',
                 color_discrete_sequence=[COLOR_KOMP], text='Count')
-            fig_d.update_traces(textposition='outside')
-            fig_d.update_layout(height=320)
-            st.plotly_chart(elite_layout(fig_d), use_container_width=True)
+            fig_d2.update_traces(textposition='outside')
+            fig_d2.update_layout(height=320)
+            st.plotly_chart(elite_layout(fig_d2), use_container_width=True)
 
-    # Insight dari tema
-    if top_w:
-        top_kata = top_w[0][0] if top_w else "N/A"
-        insight_box(
-            f"Kata yang paling sering muncul pada {filter_cat}: **'{top_kata}'**. "
-            f"Ini mencerminkan tema utama yang mendorong persepsi nasabah terhadap Bank XYZ."
-        )
+    if top_kw:
+        insight_box(f"Kata paling dominan ({fcat}): **'{top_kw[0][0]}'** "
+                    f"({top_kw[0][1]}x). Cerminan tema utama persepsi nasabah terhadap XYZ.")
 
     st.markdown("---")
 
-    # ── Verbatim Explorer ─────────────────────────────────────────────
+    # ── Verbatim Explorer (komentar diparsing) ────────────────────────
     st.markdown("<div class='section-header'>🔍 Verbatim Explorer</div>",
                 unsafe_allow_html=True)
-
-    ve1, ve2, ve3, ve4 = st.columns(4)
+    ve1,ve2,ve3,ve4 = st.columns(4)
     with ve1:
-        v_nps_filter = st.multiselect(
-            "Kategori NPS:", ['Promoter','Passive','Detractor'],
-            default=['Promoter','Passive','Detractor']
-        )
+        vnf = st.multiselect("Kategori NPS:",['Promoter','Passive','Detractor'],
+            default=['Promoter','Passive','Detractor'])
     with ve2:
-        v_prov_filter = st.multiselect(
-            "Provinsi:", sorted(df['PROV'].dropna().unique().tolist())
-        )
+        vpf = st.multiselect("Provinsi:",sorted(df['PROV'].dropna().unique()))
     with ve3:
-        v_search = st.text_input("🔎 Cari kata kunci:")
+        vsr = st.text_input("🔎 Cari kata kunci:")
     with ve4:
-        v_min_nps = st.slider("Min. NPS Score:", 0, 10, 0)
+        vms = st.slider("Min. NPS Score:", 0, 10, 0)
 
-    verb_df = df[df['G1A_CAT'].isin(v_nps_filter)] if v_nps_filter else df
-    if v_prov_filter:
-        verb_df = verb_df[verb_df['PROV'].isin(v_prov_filter)]
-    verb_df = verb_df[verb_df['G1A'] >= v_min_nps]
-    if v_search:
-        verb_df = verb_df[
-            verb_df['G1B'].fillna('').str.contains(v_search, case=False) |
-            verb_df['E1AA'].fillna('').str.contains(v_search, case=False)
-        ]
+    vdf = df[df['G1A_CAT'].isin(vnf)] if vnf else df
+    if vpf: vdf = vdf[vdf['PROV'].isin(vpf)]
+    vdf = vdf[vdf['G1A'] >= vms]
+    if vsr:
+        vdf = vdf[vdf['G1B'].fillna('').str.contains(vsr,case=False) |
+                  vdf['E1AA'].fillna('').str.contains(vsr,case=False)]
 
-    st.info(f"Menampilkan {len(verb_df):,} responden")
+    # Parse komentar sebelum ditampilkan
+    vdf_display = vdf.copy()
+    if 'G1B' in vdf_display.columns:
+        vdf_display['Alasan NPS (Parsed)'] = clean_comments(vdf_display['G1B'])
+    if 'E1AA' in vdf_display.columns:
+        vdf_display['Alasan Kepuasan (Parsed)'] = clean_comments(vdf_display['E1AA'])
 
-    display_cols = {
-        'CABANG': 'Cabang', 'PROV': 'Provinsi',
-        'S1': 'Gender', 'S2_2': 'Usia', 'S4': 'Tenure',
-        'G1A': 'Skor NPS', 'G1A_CAT': 'Kategori NPS',
-        'E1A': 'Kepuasan', 'G1B': 'Alasan NPS', 'E1AA': 'Alasan Kepuasan'
+    st.info(f"Menampilkan {len(vdf_display):,} responden")
+
+    disp_cols = {
+        'CABANG':'Cabang','PROV':'Provinsi','S1':'Gender','S2_2':'Usia',
+        'S4':'Tenure','G1A':'NPS Score','G1A_CAT':'Kategori',
+        'E1A':'Kepuasan','Alasan NPS (Parsed)':'Alasan NPS',
+        'Alasan Kepuasan (Parsed)':'Alasan Kepuasan'
     }
-    existing_cols = {k: v for k, v in display_cols.items() if k in verb_df.columns}
+    existing = {k:v for k,v in disp_cols.items() if k in vdf_display.columns}
     st.dataframe(
-        verb_df[list(existing_cols.keys())]
-            .rename(columns=existing_cols)
-            .sort_values('Skor NPS'),
-        use_container_width=True, height=380, hide_index=True
+        vdf_display[list(existing.keys())].rename(columns=existing)
+            .sort_values('NPS Score'),
+        use_container_width=True, height=400, hide_index=True
     )
 
+# =====================================================================
+# TAB 9 — AI ANALYST
+# =====================================================================
+with tab9:
+    st.markdown("<div class='section-header'>🤖 AI CX Analyst</div>",
+                unsafe_allow_html=True)
+    st.markdown("""
+    <div class='insight-box'>
+    <p>Tanyakan apapun tentang data survei ini. AI akan menjawab berdasarkan 
+    data aktual yang sedang ditampilkan (sesuai filter aktif). Contoh pertanyaan:
+    "Apa kelemahan utama XYZ dibanding kompetitor?", 
+    "Cabang mana yang paling perlu diperhatikan?",
+    "Apa yang membuat nasabah jadi Promoter?"</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Build context
+    ctx = build_context(df, df_has_komp)
+
+    # Chat history
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    # Quick questions
+    st.markdown("**⚡ Pertanyaan Cepat:**")
+    qq_cols = st.columns(4)
+    quick_questions = [
+        "Apa kelemahan utama XYZ vs kompetitor?",
+        "Cabang mana yang perlu paling diperhatikan?",
+        "Apa faktor utama yang mendorong Promoter?",
+        "Apa yang membuat nasabah jadi Detractor?"
+    ]
+    for i, (col_q, qq) in enumerate(zip(qq_cols, quick_questions)):
+        if col_q.button(qq, key=f"qq_{i}"):
+            st.session_state.chat_history.append({"role":"user","content":qq})
+            with st.spinner("AI sedang menganalisis data..."):
+                reply = call_claude_api(st.session_state.chat_history, ctx)
+            st.session_state.chat_history.append({"role":"assistant","content":reply})
+            st.rerun()
+
+    # Chat display
+    if st.session_state.chat_history:
+        st.markdown("<div class='chat-container'>", unsafe_allow_html=True)
+        for msg in st.session_state.chat_history:
+            if msg['role'] == 'user':
+                st.markdown(
+                    f"<div class='chat-user'><p>👤 {msg['content']}</p></div>"
+                    "<div class='chat-clearfix'></div>",
+                    unsafe_allow_html=True
+                )
+            else:
+                st.markdown(
+                    f"<div class='chat-ai'><p>🤖 {msg['content']}</p></div>"
+                    "<div class='chat-clearfix'></div>",
+                    unsafe_allow_html=True
+                )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # Input
+    ai_c1, ai_c2 = st.columns([4,1])
+    with ai_c1:
+        user_input = st.text_input("💬 Tanyakan sesuatu tentang data ini:",
+            placeholder="Contoh: Apa insight utama dari data ini?",
+            key="ai_input")
+    with ai_c2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        send_btn = st.button("Kirim 🚀", use_container_width=True)
+
+    if send_btn and user_input.strip():
+        st.session_state.chat_history.append({"role":"user","content":user_input})
+        with st.spinner("🤖 AI sedang menganalisis..."):
+            reply = call_claude_api(st.session_state.chat_history, ctx)
+        st.session_state.chat_history.append({"role":"assistant","content":reply})
+        st.rerun()
+
+    if st.session_state.chat_history:
+        if st.button("🗑️ Reset Chat", type="secondary"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    # ── Context Preview ───────────────────────────────────────────────
+    with st.expander("📊 Lihat Data Konteks yang Dikirim ke AI"):
+        st.code(ctx, language='text')
+
 st.markdown("---")
-st.caption("🚀 Bank XYZ — Executive CX Intelligence Dashboard v2.0 | Powered by Streamlit & Plotly")
+st.markdown(
+    "<p style='text-align:center; color:#334155 !important; font-size:11px;'>"
+    "🚀 Bank XYZ CX Intelligence Dashboard v3.0 | Dark Mode | AI-Powered | "
+    "Powered by Streamlit & Plotly</p>",
+    unsafe_allow_html=True
+)
