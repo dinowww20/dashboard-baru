@@ -373,30 +373,28 @@ def build_ctx(dff, dhk):
 
 def call_ai(msgs, ctx):
     try:
-        api_key = st.secrets.get("GEMINI_API_KEY","")
+        api_key = st.secrets.get("GROQ_API_KEY", "")
         if not api_key:
-            return ("⚠️ **API key belum dikonfigurasi.**\n\n"
-                    "Tambahkan `GEMINI_API_KEY` di **Streamlit Cloud → Settings → Secrets**:\n"
-                    "```\nGEMINI_API_KEY = \"AIza...\"\n```\n\n"
-                    "Dapatkan API key gratis di https://aistudio.google.com/apikey")
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.0-flash")
+            return "⚠️ GROQ_API_KEY belum dikonfigurasi di Streamlit Secrets."
+        from groq import Groq
+        client = Groq(api_key=api_key)
         sys_p = (
             "Kamu adalah analis Customer Experience (CX) senior ahli perbankan Indonesia. "
             "Analisis data survei kepuasan nasabah Bank XYZ dan berikan insight actionable. "
             "Jawab dalam Bahasa Indonesia profesional. Sertakan angka spesifik dari data. "
             "Format: maksimal 4 paragraf pendek, langsung ke point.\n\n"
-            f"KONTEKS DATA:\n{ctx}\n"
+            f"Konteks data:\n{ctx}"
         )
-        hist = ""
-        for m in msgs[:-1]:
-            hist += f"{'User' if m['role']=='user' else 'AI'}: {m['content']}\n\n"
-        last = msgs[-1]['content'] if msgs else ""
-        response = model.generate_content(sys_p + hist + f"User: {last}\n\nAI:")
-        return response.text
+        all_msgs = [{"role":"system","content":sys_p}] + msgs
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=all_msgs,
+            max_tokens=800,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        return f"❌ Gagal menghubungi Gemini: {str(e)}"
+        return f"❌ Gagal menghubungi AI: {str(e)}"
 
 # ═══════════════════════════════════════════════════════
 # HEADER
