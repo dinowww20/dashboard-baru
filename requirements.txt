@@ -12,3 +12,4 @@ nltk
 Sastrawi
 statsmodels
 google-generativeai
+groq
