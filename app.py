@@ -871,21 +871,37 @@ with t3:
                 margin=dict(t=46,b=14,l=10,r=10))
             st.plotly_chart(elo(fbc_komp),use_container_width=True)
     else:
-        blb_r=[l[:18]+'…' if len(l)>18 else l for l in blb]
+        # Radar dengan max 10 atribut terpilih agar tidak amburadul
+        st.info("💡 Radar chart menampilkan 10 atribut dengan gap terbesar. "
+                "Gunakan 'Bar Comparison' untuk melihat semua 24 atribut.")
+        # Ambil 10 atribut dengan gap absolut terbesar
+        gap_abs=[abs(x-k) if not np.isnan(k) else 0 for x,k in zip(bxv,bkv)]
+        top10_idx=sorted(range(len(gap_abs)),key=lambda i:gap_abs[i],reverse=True)[:10]
+        blb_r10=[blb[i] for i in top10_idx]
+        bxv_r10=[bxv[i] for i in top10_idx]
+        bkv_r10=[bkv[i] for i in top10_idx]
+        # Pastikan tidak ada nan di kompetitor
+        bkv_r10=[v if not np.isnan(v) else 0 for v in bkv_r10]
         fr=go.Figure()
-        fr.add_trace(go.Scatterpolar(r=bxv,theta=blb_r,fill='toself',name='Bank XYZ',
-            line_color=C_XYZ,fillcolor='rgba(59,130,246,0.10)',
+        fr.add_trace(go.Scatterpolar(
+            r=bxv_r10,theta=blb_r10,fill='toself',name='Bank XYZ',
+            line_color=C_XYZ,fillcolor='rgba(59,130,246,0.15)',
             hovertemplate='<b>%{theta}</b><br>XYZ: %{r:.2f}<extra></extra>'))
-        fr.add_trace(go.Scatterpolar(r=[v if (v is not None and not np.isnan(v)) else 0 for v in bkv],theta=blb_r,fill='toself',name=target_komp,
-            line_color=C_KOMP,fillcolor='rgba(248,113,113,0.07)',
+        fr.add_trace(go.Scatterpolar(
+            r=bkv_r10,theta=blb_r10,fill='toself',name=target_komp,
+            line_color=C_KOMP,fillcolor='rgba(248,113,113,0.10)',
             hovertemplate=f'<b>%{{theta}}</b><br>{target_komp}: %{{r:.2f}}<extra></extra>'))
         fr.update_layout(
             polar=dict(bgcolor=SURF,
-                radialaxis=dict(visible=True,range=[3,6],gridcolor=GRID,tickfont=dict(color='#3D5470',size=8)),
-                angularaxis=dict(tickfont=dict(color='#6A8AAA',size=8))),
-            legend=dict(orientation="h",y=-0.1),height=580,margin=dict(t=40,b=80,l=80,r=80))
-        st.info("💡 Hover ke titik untuk nama atribut lengkap. Gunakan 'Bar Comparison' untuk label yang lebih jelas.")
-        st.plotly_chart(elo(fr),use_container_width=True)
+                radialaxis=dict(visible=True,range=[3,6.5],gridcolor=GRID,
+                    tickfont=dict(color='#3D5470',size=9)),
+                angularaxis=dict(tickfont=dict(color='#CBD5E1',size=10),
+                    direction='clockwise')),
+            legend=dict(orientation="h",y=-0.15),
+            height=560,margin=dict(t=40,b=90,l=90,r=90))
+        st.plotly_chart(elo(fr,
+            "Radar 10 Atribut Gap Terbesar (XYZ vs Kompetitor)"),
+            use_container_width=True)
 
     sh("🎯 IPA Matrix 24 Atribut Brand")
     bdf=pd.DataFrame({'Label':blb,'Label_Full':blb_full,'Kepentingan':biv,'Kepuasan':bxv,'N':bn_xyz})
