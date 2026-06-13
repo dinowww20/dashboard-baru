@@ -866,7 +866,7 @@ with t3:
         fr.add_trace(go.Scatterpolar(r=bxv,theta=blb_r,fill='toself',name='Bank XYZ',
             line_color=C_XYZ,fillcolor='rgba(59,130,246,0.10)',
             hovertemplate='<b>%{theta}</b><br>XYZ: %{r:.2f}<extra></extra>'))
-        fr.add_trace(go.Scatterpolar(r=bkv,theta=blb_r,fill='toself',name=target_komp,
+        fr.add_trace(go.Scatterpolar(r=[v if (v is not None and not np.isnan(v)) else 0 for v in bkv],theta=blb_r,fill='toself',name=target_komp,
             line_color=C_KOMP,fillcolor='rgba(248,113,113,0.07)',
             hovertemplate=f'<b>%{{theta}}</b><br>{target_komp}: %{{r:.2f}}<extra></extra>'))
         fr.update_layout(
@@ -901,7 +901,9 @@ with t3:
     gb=pd.DataFrame({'Atribut':blb,'Atribut_Full':blb_full,'XYZ':bxv,'Komp':bkv,
         'Gap':[x-k for x,k in zip(bxv,bkv)],
         'N_XYZ':bn_xyz,'N_Komp':bn_komp}).sort_values('Gap')
-    gb['Gap']=gb['Gap'].clip(-2.5,2.5)
+    gb['Gap']=pd.to_numeric(gb['Gap'],errors='coerce')
+    gb['Gap']=gb['Gap'].clip(-1.5,1.5)
+    gb=gb.dropna(subset=['Gap'])
     gb['W']=np.where(gb['Gap']<0,C_KOMP,C_XYZ)
     fgb=px.bar(gb,x='Gap',y='Atribut',orientation='h',text='Gap')
     fgb.update_traces(marker_color=gb['W'],texttemplate='%{x:.2f}',textposition='outside',
