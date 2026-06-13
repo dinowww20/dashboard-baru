@@ -1242,13 +1242,17 @@ with t6:
 # ═══════════════════════════════════════════════════════
 # TAB 7 — CLUSTERING
 # ═══════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════
+# TAB 7 — CLUSTERING
+# ═══════════════════════════════════════════════════════
 with t7:
     sh("🧩 Segmentasi Nasabah via K-Means Clustering")
     if not SK_OK:
         st.warning("scikit-learn tidak terinstal. Tambahkan ke requirements.txt.")
     else:
         cl1,cl2,cl3=st.columns(3)
-        with cl1: n_cl=st.slider("Jumlah Cluster:",2,6,3,key="sl_ncl")
+        with cl1:
+            n_cl=st.slider("Jumlah Cluster:",2,6,3,key="sl_ncl")
         with cl2:
             cl_feat_opts={
                 'NPS Score':'G1A',
@@ -1270,24 +1274,26 @@ with t7:
                 options=["Cluster","Kategori NPS","Provinsi","Gender"])
 
         df_cl=df.copy()
-        epc_cl=[c for c in["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11","T_I1A_14","T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in df_cl.columns]
+        epc_cl=[c for c in["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11","T_I1A_14",
+            "T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in df_cl.columns]
         if epc_cl:
             df_cl['Emosi_Pos']=df_cl[epc_cl].mean(axis=1)
             cl_feat_opts['Emosi Positif']='Emosi_Pos'
 
-        feat_cols=[cl_feat_opts[f] for f in sel_feats if f in cl_feat_opts and cl_feat_opts[f] in df_cl.columns]
+        feat_cols=[cl_feat_opts[f] for f in sel_feats
+                   if f in cl_feat_opts and cl_feat_opts[f] in df_cl.columns]
 
-# Konversi semua kolom ke numerik dulu
-df_cl_valid=df_cl[feat_cols].copy()
-for col in feat_cols:
-    df_cl_valid[col]=pd.to_numeric(df_cl_valid[col],errors='coerce')
-df_cl_valid=df_cl_valid.dropna()
+        # Konversi semua kolom ke numerik untuk menghindari dtype error
+        df_cl_valid=df_cl[feat_cols].copy()
+        for _col in feat_cols:
+            df_cl_valid[_col]=pd.to_numeric(df_cl_valid[_col],errors='coerce')
+        df_cl_valid=df_cl_valid.dropna()
 
-if len(df_cl_valid)<n_cl*5:
-    st.warning("Data tidak cukup untuk clustering dengan pilihan ini.")
-else:
-    sc=StandardScaler()
-    X=sc.fit_transform(df_cl_valid.values.astype(float))
+        if len(df_cl_valid)<n_cl*5:
+            st.warning("Data tidak cukup untuk clustering dengan pilihan ini.")
+        else:
+            sc=StandardScaler()
+            X=sc.fit_transform(df_cl_valid.values.astype(float))
             km=KMeans(n_clusters=n_cl,random_state=42,n_init=10)
             df_cl.loc[df_cl_valid.index,'Cluster']=km.fit_predict(X).astype(str)
             df_cl['Cluster']=df_cl['Cluster'].fillna('N/A')
@@ -1295,99 +1301,133 @@ else:
             with st.expander("📊 Elbow Chart — Pilih Jumlah Cluster Optimal"):
                 inertias=[]
                 for k in range(2,min(10,len(df_cl_valid)//5+1)):
-                    km_e=KMeans(n_clusters=k,random_state=42,n_init=10); km_e.fit(X); inertias.append(km_e.inertia_)
-                fel=px.line(x=list(range(2,min(10,len(df_cl_valid)//5+1))),y=inertias,markers=True,
-                    labels={'x':'Jumlah Cluster','y':'Inertia (WCSS)'},color_discrete_sequence=[C_XYZ])
-                fel.update_traces(hovertemplate='K=%{x} cluster<br>Inertia: %{y:.0f}<extra></extra>')
-                st.plotly_chart(elo(fel,"Pilih K di titik siku — makin kecil inertia makin baik",300),use_container_width=True)
+                    km_e=KMeans(n_clusters=k,random_state=42,n_init=10)
+                    km_e.fit(X)
+                    inertias.append(km_e.inertia_)
+                fel=px.line(
+                    x=list(range(2,min(10,len(df_cl_valid)//5+1))),
+                    y=inertias,markers=True,
+                    labels={'x':'Jumlah Cluster','y':'Inertia (WCSS)'},
+                    color_discrete_sequence=[C_XYZ])
+                fel.update_traces(
+                    hovertemplate='K=%{x} cluster<br>Inertia: %{y:.0f}<extra></extra>')
+                st.plotly_chart(elo(fel,
+                    "Pilih K di titik siku — makin kecil inertia makin baik",300),
+                    use_container_width=True)
 
-            pca=PCA(n_components=2,random_state=42); X_pca=pca.fit_transform(X)
+            pca=PCA(n_components=2,random_state=42)
+            X_pca=pca.fit_transform(X)
             var1,var2=pca.explained_variance_ratio_
             df_pca=df_cl.loc[df_cl_valid.index].copy()
-            df_pca['PC1']=X_pca[:,0]; df_pca['PC2']=X_pca[:,1]
+            df_pca['PC1']=X_pca[:,0]
+            df_pca['PC2']=X_pca[:,1]
 
-            # Mapping warna dengan nama ramah
-            color_map_cl={"Cluster":"Cluster","Kategori NPS":"G1A_CAT","Provinsi":"PROV","Gender":"S1"}
+            color_map_cl={
+                "Cluster":"Cluster","Kategori NPS":"G1A_CAT",
+                "Provinsi":"PROV","Gender":"S1"
+            }
             color_col=color_map_cl[cl_color]
-            color_d=NPS_C if cl_color=="Kategori NPS" else {u:c for u,c in zip(df_pca[color_col].dropna().unique(),px.colors.qualitative.Plotly)}
+            color_d=(NPS_C if cl_color=="Kategori NPS"
+                     else {u:c for u,c in zip(
+                         df_pca[color_col].dropna().unique(),
+                         px.colors.qualitative.Plotly)})
 
-            cd_exist=[c for c in['CABANG','PROV','G1A','E1A','F1A','G1A_CAT','Cluster'] if c in df_pca.columns]
-            fpc=px.scatter(df_pca,x='PC1',y='PC2',color=color_col,color_discrete_map=color_d,
+            cd_exist=[c for c in
+                ['CABANG','PROV','G1A','E1A','F1A','G1A_CAT','Cluster']
+                if c in df_pca.columns]
+            fpc=px.scatter(df_pca,x='PC1',y='PC2',
+                color=color_col,color_discrete_map=color_d,
                 symbol='Cluster',opacity=0.7,
-                labels={'PC1':f'Komponen Utama 1 ({var1*100:.1f}% variansi)',
-                        'PC2':f'Komponen Utama 2 ({var2*100:.1f}% variansi)'})
-            fpc.update_traces(marker=dict(size=6),customdata=df_pca[cd_exist].values,
-                hovertemplate='<b>%{customdata[0]}</b><br>'
-                              'Provinsi: %{customdata[1]}<br>'
-                              'NPS Score: %{customdata[2]:.1f}<br>'
-                              'Kepuasan: %{customdata[3]:.2f}<br>'
-                              'Loyalitas: %{customdata[4]:.2f}<br>'
-                              'Kategori NPS: %{customdata[5]}<br>'
-                              'Cluster: %{customdata[6]}<extra></extra>')
+                labels={
+                    'PC1':f'Komponen Utama 1 ({var1*100:.1f}% variansi)',
+                    'PC2':f'Komponen Utama 2 ({var2*100:.1f}% variansi)'
+                })
+            fpc.update_traces(marker=dict(size=6),
+                customdata=df_pca[cd_exist].values,
+                hovertemplate=(
+                    '<b>%{customdata[0]}</b><br>'
+                    'Provinsi: %{customdata[1]}<br>'
+                    'NPS Score: %{customdata[2]:.1f}<br>'
+                    'Kepuasan: %{customdata[3]:.2f}<br>'
+                    'Loyalitas: %{customdata[4]:.2f}<br>'
+                    'Kategori NPS: %{customdata[5]}<br>'
+                    'Cluster: %{customdata[6]}<extra></extra>'))
             fpc.update_layout(height=500)
             st.plotly_chart(elo(fpc,
-                f"Visualisasi Cluster 2D — Total Variansi Terjelaskan: {(var1+var2)*100:.1f}% (N={len(df_pca):,})"),
+                f"Visualisasi Cluster 2D — Variansi Terjelaskan: "
+                f"{(var1+var2)*100:.1f}% (N={len(df_pca):,})"),
                 use_container_width=True)
 
-            # ── Profil cluster dengan nama kolom ramah ──────────
             sh("📋 Profil Rata-rata per Cluster")
             prof_cols=[c for c in feat_cols if c in df_pca.columns]
-            extra_c=[c for c in['G1A','E1A','F1A'] if c not in feat_cols and c in df_pca.columns]
+            extra_c=[c for c in['G1A','E1A','F1A']
+                     if c not in feat_cols and c in df_pca.columns]
             prof=df_pca.groupby('Cluster')[prof_cols+extra_c].mean().round(2)
-            # Rename kolom kode → nama ramah
             rename_map={c:nama_kolom(c) for c in prof.columns}
             prof=prof.rename(columns=rename_map)
             prof['Jumlah Responden']=df_pca.groupby('Cluster').size()
-            # Tambah NPS kategori dominan per cluster
-            nps_dom=df_pca.groupby('Cluster')['G1A_CAT'].agg(lambda x: x.value_counts().index[0])
+            nps_dom=df_pca.groupby('Cluster')['G1A_CAT'].agg(
+                lambda x: x.value_counts().index[0])
             prof['Kategori NPS Dominan']=nps_dom
             st.dataframe(prof,use_container_width=True)
-
-            ib(f"Tabel di atas menunjukkan rata-rata setiap metrik per cluster beserta jumlah responden. "
-               f"Cluster dengan 'Jumlah Responden' sedikit perlu diinterpretasi dengan hati-hati.")
+            ib("Tabel menunjukkan rata-rata tiap metrik per cluster beserta jumlah "
+               "responden. Cluster dengan sampel sedikit perlu diinterpretasi hati-hati.")
 
             if len(feat_cols)>=3:
                 sh("🕸️ Radar Profil per Cluster")
                 fig_cl_r=go.Figure()
                 cl_colors_r=px.colors.qualitative.Plotly
-                # Gunakan nama ramah untuk label radar
-                theta_labels=[sel_feats[i] if i<len(sel_feats) else f for i,f in enumerate(feat_cols)]
-                for ci,cl_name in enumerate(sorted(df_pca['Cluster'].dropna().unique())):
-                    cl_data=df_pca[df_pca['Cluster']==cl_name][feat_cols].mean().values.tolist()
+                theta_labels=[sel_feats[i] if i<len(sel_feats) else f
+                              for i,f in enumerate(feat_cols)]
+                for ci,cl_name in enumerate(
+                        sorted(df_pca['Cluster'].dropna().unique())):
+                    cl_data=(df_pca[df_pca['Cluster']==cl_name][feat_cols]
+                             .mean().values.tolist())
                     n_cl_resp=len(df_pca[df_pca['Cluster']==cl_name])
-                    fig_cl_r.add_trace(go.Scatterpolar(r=cl_data,theta=theta_labels,
-                        fill='toself',name=f'Cluster {cl_name} (N={n_cl_resp})',
+                    fig_cl_r.add_trace(go.Scatterpolar(
+                        r=cl_data,theta=theta_labels,fill='toself',
+                        name=f'Cluster {cl_name} (N={n_cl_resp})',
                         line_color=cl_colors_r[ci%len(cl_colors_r)],
                         hovertemplate='<b>%{theta}</b><br>Rata-rata: %{r:.2f}<extra></extra>'))
                 fig_cl_r.update_layout(
                     polar=dict(bgcolor=SURF,
-                        radialaxis=dict(visible=True,gridcolor=GRID,tickfont=dict(color='#3D5470',size=8)),
+                        radialaxis=dict(visible=True,gridcolor=GRID,
+                            tickfont=dict(color='#3D5470',size=8)),
                         angularaxis=dict(tickfont=dict(color='#6A8AAA',size=10))),
                     height=440,margin=dict(t=40,b=60,l=60,r=60))
-                st.plotly_chart(elo(fig_cl_r,"Radar Profil per Cluster"),use_container_width=True)
+                st.plotly_chart(elo(fig_cl_r,"Radar Profil per Cluster"),
+                    use_container_width=True)
 
             sh("📊 Distribusi Kategori NPS per Cluster")
             nps_cl=df_pca.groupby(['Cluster','G1A_CAT']).size().reset_index(name='Jumlah')
-            nps_cl_pct=df_pca.groupby('Cluster')['G1A_CAT'].value_counts(normalize=True).mul(100).round(1).rename('Persen').reset_index()
+            nps_cl_pct=(df_pca.groupby('Cluster')['G1A_CAT']
+                        .value_counts(normalize=True)
+                        .mul(100).round(1)
+                        .rename('Persen').reset_index())
             nps_cl=nps_cl.merge(nps_cl_pct,on=['Cluster','G1A_CAT'])
-            fnc=px.bar(nps_cl,x='Cluster',y='Jumlah',color='G1A_CAT',color_discrete_map=NPS_C,
-                barmode='stack',text='Jumlah',
+            fnc=px.bar(nps_cl,x='Cluster',y='Jumlah',color='G1A_CAT',
+                color_discrete_map=NPS_C,barmode='stack',text='Jumlah',
                 labels={'Jumlah':'Jumlah Responden','G1A_CAT':'Kategori NPS'})
             fnc.update_traces(textposition='inside',
                 customdata=nps_cl['Persen'].values,
-                hovertemplate='Cluster %{x}<br>Kategori: %{fullData.name}<br>'
-                              'Jumlah: %{y} responden<br>Persentase: %{customdata:.1f}%<extra></extra>')
-            st.plotly_chart(elo(fnc,"Komposisi Kategori NPS per Cluster"),use_container_width=True)
+                hovertemplate=(
+                    'Cluster %{x}<br>Kategori: %{fullData.name}<br>'
+                    'Jumlah: %{y} responden<br>'
+                    'Persentase: %{customdata:.1f}%<extra></extra>'))
+            st.plotly_chart(elo(fnc,"Komposisi Kategori NPS per Cluster"),
+                use_container_width=True)
 
             if 'G1A' in df_pca.columns:
                 cl_prof=df_pca.groupby('Cluster')[['G1A','E1A','F1A']].mean()
                 n_per_cl=df_pca.groupby('Cluster').size()
-                best_cl=cl_prof['G1A'].idxmax(); worst_cl=cl_prof['G1A'].idxmin()
-                ib(f"Cluster **{best_cl}** NPS Score tertinggi ({cl_prof.loc[best_cl,'G1A']:.1f}, "
-                   f"N={n_per_cl[best_cl]}) — segmen promoter utama. "
-                   f"Cluster **{worst_cl}** NPS Score terendah ({cl_prof.loc[worst_cl,'G1A']:.1f}, "
-                   f"N={n_per_cl[worst_cl]}) — prioritas program retention.")
-
+                best_cl=cl_prof['G1A'].idxmax()
+                worst_cl=cl_prof['G1A'].idxmin()
+                ib(f"Cluster **{best_cl}** NPS Score tertinggi "
+                   f"({cl_prof.loc[best_cl,'G1A']:.1f}, N={n_per_cl[best_cl]}) "
+                   f"— segmen promoter utama. "
+                   f"Cluster **{worst_cl}** NPS Score terendah "
+                   f"({cl_prof.loc[worst_cl,'G1A']:.1f}, N={n_per_cl[worst_cl]}) "
+                   f"— prioritas program retention.")
 # ═══════════════════════════════════════════════════════
 # TAB 8 — PROFIL & SEGMENTASI
 # ═══════════════════════════════════════════════════════
