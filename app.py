@@ -1436,7 +1436,7 @@ with t9:
 # TAB 10 — AI ANALYST (GEMINI)
 # ═══════════════════════════════════════════════════════
 with t10:
-    sh("🤖 AI CX Analyst — Powered by Gemini 2.0 Flash")
+    sh("🤖 AI CX Analyst — Powered by Groq & Llama 3.1")
     st.markdown("""
     <div style='background:linear-gradient(135deg,#0C2048,#0C1829);
     border:1px solid #163690;border-radius:14px;padding:16px 20px;margin-bottom:16px'>
@@ -1460,7 +1460,7 @@ with t10:
     for i,(cq,qt) in enumerate(zip(qc,qq)):
         if cq.button(qt,key=f"qq_{i}"):
             st.session_state.chat_history.append({"role":"user","content":qt})
-            with st.spinner("🤖 Gemini sedang menganalisis data..."):
+            with st.spinner("🤖 AI sedang menganalisis data..."):
                 rep=call_ai(st.session_state.chat_history,ctx)
             st.session_state.chat_history.append({"role":"assistant","content":rep})
             st.rerun()
@@ -1487,7 +1487,7 @@ with t10:
 
     if send and user_in.strip():
         st.session_state.chat_history.append({"role":"user","content":user_in})
-        with st.spinner("🤖 Gemini sedang menganalisis..."):
+        with st.spinner("🤖 AI sedang menganalisis..."):
             rep=call_ai(st.session_state.chat_history,ctx)
         st.session_state.chat_history.append({"role":"assistant","content":rep})
         st.rerun()
