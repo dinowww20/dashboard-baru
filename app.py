@@ -1277,23 +1277,17 @@ with t7:
 
         feat_cols=[cl_feat_opts[f] for f in sel_feats if f in cl_feat_opts and cl_feat_opts[f] in df_cl.columns]
 
-# Pastikan semua kolom numerik sebelum masuk scaler
+# Konversi semua kolom ke numerik dulu
 df_cl_valid=df_cl[feat_cols].copy()
 for col in feat_cols:
     df_cl_valid[col]=pd.to_numeric(df_cl_valid[col],errors='coerce')
 df_cl_valid=df_cl_valid.dropna()
 
-if df_cl_valid.empty or len(df_cl_valid)<n_cl*5:
-    st.warning("Data tidak cukup atau tidak valid untuk clustering dengan pilihan ini.")
+if len(df_cl_valid)<n_cl*5:
+    st.warning("Data tidak cukup untuk clustering dengan pilihan ini.")
 else:
     sc=StandardScaler()
-    X=sc.fit_transform(df_cl_valid)
-
-        if len(df_cl_valid)<n_cl*5:
-            st.warning("Data tidak cukup untuk clustering dengan pilihan ini.")
-        else:
-            sc=StandardScaler()
-            X=sc.fit_transform(df_cl_valid)
+    X=sc.fit_transform(df_cl_valid.values.astype(float))
             km=KMeans(n_clusters=n_cl,random_state=42,n_init=10)
             df_cl.loc[df_cl_valid.index,'Cluster']=km.fit_predict(X).astype(str)
             df_cl['Cluster']=df_cl['Cluster'].fillna('N/A')
