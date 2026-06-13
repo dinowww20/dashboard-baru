@@ -826,10 +826,6 @@ with t3:
     st.markdown("<br>",unsafe_allow_html=True)
 
     if brand_view=="Bar Comparison":
-        # ── FIX UTAMA: pisah jadi 2 chart horizontal terpisah ──
-        # agar bar tidak menumpuk dan label tetap terbaca
-        b_col1, b_col2 = st.columns(2)
-        if brand_view=="Bar Comparison":
         fbc=go.Figure()
         fbc.add_trace(go.Bar(
             name='Kepentingan',
