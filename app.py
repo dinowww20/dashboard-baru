@@ -829,47 +829,36 @@ with t3:
         # ── FIX UTAMA: pisah jadi 2 chart horizontal terpisah ──
         # agar bar tidak menumpuk dan label tetap terbaca
         b_col1, b_col2 = st.columns(2)
-        with b_col1:
-            sh("🔵 Bank XYZ — Kepentingan vs Kepuasan")
-            fbc_xyz=go.Figure()
-            fbc_xyz.add_trace(go.Bar(
-                name='Kepentingan',x=biv,y=blb,orientation='h',
-                marker_color=C_IMP,opacity=0.75,
-                customdata=[[f,n] for f,n in zip(blb_full,bn_xyz)],
-                hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>'))
-            fbc_xyz.add_trace(go.Bar(
-                name='Kepuasan XYZ',x=bxv,y=blb,orientation='h',
-                marker_color=C_XYZ,
-                customdata=[[f,n] for f,n in zip(blb_full,bn_xyz)],
-                hovertemplate='<b>%{customdata[0]}</b><br>Kepuasan XYZ: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>'))
-            fbc_xyz.update_layout(
-                barmode='group',xaxis_range=[3,6.8],
-                height=max(720,len(blb)*30),
-                yaxis=dict(automargin=True,tickfont=dict(size=10)),
-                margin=dict(t=46,b=14,l=200,r=10))
-            st.plotly_chart(elo(fbc_xyz),use_container_width=True)
-
-        with b_col2:
-            sh(f"🔴 {target_komp} — Kepuasan Kompetitor")
-            fbc_komp=go.Figure()
-            fbc_komp.add_trace(go.Bar(
-                name='Kepentingan',x=biv,y=blb,orientation='h',
-                marker_color=C_IMP,opacity=0.75,
-                customdata=[[f,n] for f,n in zip(blb_full,bn_komp)],
-                hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{x:.2f}<extra></extra>'))
-            fbc_komp.add_trace(go.Bar(
-                name=f'Kepuasan {target_komp}',
-                x=[v if not np.isnan(v) else None for v in bkv],
-                y=blb,orientation='h',
-                marker_color=C_KOMP,
-                customdata=[[f,n] for f,n in zip(blb_full,bn_komp)],
-                hovertemplate=f'<b>%{{customdata[0]}}</b><br>Kepuasan Komp: %{{x:.2f}}<br>N: %{{customdata[1]}}<extra></extra>'))
-            fbc_komp.update_layout(
-                barmode='group',xaxis_range=[3,6.8],
-                height=max(720,len(blb)*30),
-                yaxis=dict(automargin=True,tickfont=dict(size=10),showticklabels=False),
-                margin=dict(t=46,b=14,l=10,r=10))
-            st.plotly_chart(elo(fbc_komp),use_container_width=True)
+        if brand_view=="Bar Comparison":
+        fbc=go.Figure()
+        fbc.add_trace(go.Bar(
+            name='Kepentingan',
+            x=biv, y=blb, orientation='h',
+            marker_color=C_IMP, opacity=0.75,
+            customdata=[[f,n] for f,n in zip(blb_full,bn_xyz)],
+            hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>'))
+        fbc.add_trace(go.Bar(
+            name='Kepuasan XYZ',
+            x=bxv, y=blb, orientation='h',
+            marker_color=C_XYZ,
+            customdata=[[f,n] for f,n in zip(blb_full,bn_xyz)],
+            hovertemplate='<b>%{customdata[0]}</b><br>Kepuasan XYZ: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>'))
+        fbc.add_trace(go.Bar(
+            name=f'Kepuasan {target_komp}',
+            x=[v if not np.isnan(v) else None for v in bkv],
+            y=blb, orientation='h',
+            marker_color=C_KOMP,
+            customdata=[[f,n] for f,n in zip(blb_full,bn_komp)],
+            hovertemplate=f'<b>%{{customdata[0]}}</b><br>Kepuasan Komp: %{{x:.2f}}<br>N: %{{customdata[1]}}<extra></extra>'))
+        fbc.update_layout(
+            barmode='group',
+            xaxis_range=[3,6.8],
+            height=max(900,len(blb)*36),
+            yaxis=dict(automargin=True, tickfont=dict(size=10)),
+            margin=dict(t=46,b=14,l=220,r=20))
+        st.plotly_chart(elo(fbc,
+            f"Kepentingan vs Kepuasan XYZ vs {target_komp}"),
+            use_container_width=True)
     else:
         # Radar dengan max 10 atribut terpilih agar tidak amburadul
         st.info("💡 Radar chart menampilkan 10 atribut dengan gap terbesar. "
