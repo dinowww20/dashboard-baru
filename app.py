@@ -1276,7 +1276,18 @@ with t7:
             cl_feat_opts['Emosi Positif']='Emosi_Pos'
 
         feat_cols=[cl_feat_opts[f] for f in sel_feats if f in cl_feat_opts and cl_feat_opts[f] in df_cl.columns]
-        df_cl_valid=df_cl[feat_cols].dropna()
+
+# Pastikan semua kolom numerik sebelum masuk scaler
+df_cl_valid=df_cl[feat_cols].copy()
+for col in feat_cols:
+    df_cl_valid[col]=pd.to_numeric(df_cl_valid[col],errors='coerce')
+df_cl_valid=df_cl_valid.dropna()
+
+if df_cl_valid.empty or len(df_cl_valid)<n_cl*5:
+    st.warning("Data tidak cukup atau tidak valid untuk clustering dengan pilihan ini.")
+else:
+    sc=StandardScaler()
+    X=sc.fit_transform(df_cl_valid)
 
         if len(df_cl_valid)<n_cl*5:
             st.warning("Data tidak cukup untuk clustering dengan pilihan ini.")
