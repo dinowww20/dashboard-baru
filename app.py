@@ -804,7 +804,17 @@ with t3:
     bxc=sorted([c for c in df.columns if c.startswith("T_C1B_") and int(c.split("_")[-1])%3==2],key=lambda x:int(x.split("_")[-1]))
     bkc=sorted([c for c in df.columns if c.startswith("T_C1B_") and int(c.split("_")[-1])%3==0],key=lambda x:int(x.split("_")[-1]))
     blb_full=[slbl(c,col_map,55) for c in bic]
-    blb=[slbl(c,col_map,30) for c in bic]
+    blb=[slbl(c,col_map,50) for c in bic]
+    seen={}
+    blb_unique=[]
+    for l in blb:
+        if l in seen:
+            seen[l]+=1
+            blb_unique.append(f"{l} ({seen[l]})")
+        else:
+            seen[l]=0
+            blb_unique.append(l)
+    blb=blb_unique
     biv=[df[c].mean() for c in bic]
     bxv=[df[c].mean() for c in bxc[:len(bic)]]
     bkv=[df_hk[c].mean() if c in df_hk.columns else np.nan for c in bkc[:len(bic)]]
@@ -861,7 +871,7 @@ with t3:
                 margin=dict(t=46,b=14,l=10,r=10))
             st.plotly_chart(elo(fbc_komp),use_container_width=True)
     else:
-        blb_r=[l[:13]+'…' if len(l)>13 else l for l in blb]
+        blb_r=[l[:18]+'…' if len(l)>18 else l for l in blb]
         fr=go.Figure()
         fr.add_trace(go.Scatterpolar(r=bxv,theta=blb_r,fill='toself',name='Bank XYZ',
             line_color=C_XYZ,fillcolor='rgba(59,130,246,0.10)',
