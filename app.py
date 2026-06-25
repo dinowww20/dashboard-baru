@@ -642,7 +642,7 @@ with t1:
         fig_sc.add_trace(go.Bar(name='Bank XYZ',y=sdf['Dimensi'],x=sdf['XYZ'], orientation='h',marker_color=C_XYZ, text=sdf['XYZ'],texttemplate='%{x:.2f}',textposition='outside', customdata=sdf[['XYZ','Kompetitor','Gap','N_XYZ']].values, hovertemplate='<b>%{y}</b><br>XYZ: %{customdata[0]:.2f}<br>Komp: %{customdata[1]}<br>Gap: %{customdata[2]}<br>N responden: %{customdata[3]:.0f}<extra></extra>'))
         fig_sc.add_trace(go.Bar(name='Kompetitor',y=sdf['Dimensi'], x=pd.to_numeric(sdf['Kompetitor'],errors='coerce'), orientation='h',marker_color=C_KOMP,opacity=0.85, customdata=sdf[['Kompetitor','N_Komp']].values, hovertemplate='<b>%{y}</b><br>Kompetitor: %{customdata[0]:.2f}<br>N responden: %{customdata[1]:.0f}<extra></extra>'))
         fig_sc.update_layout(barmode='group',xaxis_range=[4,6.8],height=520)
-        st.plotly_chart(elo(fig_sc),use_container_width=True)
+        st.plotly_chart(elo(fig_sc,f"Skor Rata-rata per Dimensi (N≈{n_tot:,}, bervariasi per dimensi — lihat hover)"),use_container_width=True)
 
     r3,r4=st.columns(2)
     with r3:
@@ -674,7 +674,7 @@ with t1:
         fco=px.imshow(r_mat,text_auto=".2f", color_continuous_scale='Greens',aspect='auto',zmin=-1,zmax=1)
         customdata_corr=np.dstack([p_mat.values, n_mat.values, sig_mask.values])
         fco.update_traces(customdata=customdata_corr, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>Korelasi (r): %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
-        st.plotly_chart(elo(fco,h=380),use_container_width=True)
+        st.plotly_chart(elo(fco,f"Korelasi Pearson antar Dimensi (N≈{n_tot:,}, p-value & N tepat di hover)",h=380),use_container_width=True)
         if SCIPY_OK:
             n_not_sig=int((~sig_mask.values).sum()/2 - len(r_mat)/2) if len(r_mat)>0 else 0
             st.caption("Korelasi dihitung Pearson dengan N pairwise (per pasangan kolom, exclude data kosong). " + (f"Beberapa pasangan tidak signifikan secara statistik (p≥0.05) — perlakukan koefisiennya sebagai indikatif saja." if (~sig_mask.values).any() else "Semua pasangan signifikan secara statistik (p<0.05)."))
@@ -1053,7 +1053,7 @@ with t4:
     fd1=px.bar(d1df,x='Jenis',y='Skor',color='Jenis',text='Skor', color_discrete_map={'Teller':C_XYZ,'Customer Service':C_KOMP,'Keduanya':'#FBBF24'})
     fd1.update_traces(texttemplate='%{y:.2f}',textposition='outside', customdata=d1df['N'].values, hovertemplate='<b>%{x}</b><br>Skor: %{y:.3f}<br>N responden: %{customdata}<extra></extra>')
     fd1.update_yaxes(range=[4.5,6.5])
-    st.plotly_chart(elo(fd1,"",400),use_container_width=True)
+    st.plotly_chart(elo(fd1,f"Skor Rata-rata per Jenis Transaksi (Total N={len(df):,}, N per jenis di hover)",400),use_container_width=True)
 
 # ═══════════════════════════════════════════════════════
 # TAB 5 — EMOSI & LOYALITAS
@@ -1089,14 +1089,14 @@ with t5:
         fep.add_trace(go.Bar(name='XYZ',x=elp[:len(epv)],y=epv,marker_color=C_XYZ, text=np.round(epv,2),textposition='outside', customdata=n_ep, hovertemplate='<b>%{x}</b><br>XYZ: %{y:.3f}<br>N: %{customdata}<extra></extra>'))
         fep.add_trace(go.Bar(name=target_komp,x=elp[:len(epkv)],y=epkv,marker_color=C_KOMP, text=np.round(epkv,2),textposition='outside', hovertemplate=f'<b>%{{x}}</b><br>{target_komp}: %{{y:.3f}}<extra></extra>'))
         fep.update_layout(barmode='group',yaxis_range=[3,6.8],xaxis_tickangle=-20,height=420)
-        st.plotly_chart(elo(fep),use_container_width=True)
+        st.plotly_chart(elo(fep,f"N={len(df):,}"),use_container_width=True)
     with ec2:
         sh("Emosi Negatif (Makin Rendah = Makin Baik)")
         fen=go.Figure()
         fen.add_trace(go.Bar(name='XYZ',x=eln[:len(env)],y=env,marker_color=C_XYZ, text=np.round(env,2),textposition='outside', customdata=n_en, hovertemplate='<b>%{x}</b><br>XYZ: %{y:.3f}<br>N: %{customdata}<extra></extra>'))
         fen.add_trace(go.Bar(name=target_komp,x=eln[:len(enkv)],y=enkv,marker_color=C_KOMP, text=np.round(enkv,2),textposition='outside', hovertemplate=f'<b>%{{x}}</b><br>{target_komp}: %{{y:.3f}}<extra></extra>'))
         fen.update_layout(barmode='group',yaxis_range=[1,4],xaxis_tickangle=-20,height=420)
-        st.plotly_chart(elo(fen),use_container_width=True)
+        st.plotly_chart(elo(fen,f"N={len(df):,}"),use_container_width=True)
 
     sh("Brand Equity — 15 Atribut")
     hxc=[c for c in["T_H1A_2","T_H1A_5","T_H1A_8","T_H1A_11","T_H1A_14","T_H1A_17","T_H1A_20","T_H1A_23","T_H1A_26","T_H1A_29","T_H1A_32","T_H1A_35","T_H1A_38","T_H1A_41","T_H1A_44"] if c in df.columns]
@@ -1121,7 +1121,7 @@ with t5:
         fec=px.imshow(r_mat5,text_auto=".2f",color_continuous_scale='Greens',aspect='auto',zmin=-1,zmax=1)
         customdata_cce=np.dstack([p_mat5.values, n_mat5.values])
         fec.update_traces(customdata=customdata_cce, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
-        st.plotly_chart(elo(fec,h=340),use_container_width=True)
+        st.plotly_chart(elo(fec,"Korelasi Pearson (hover: p-value & N)",h=340),use_container_width=True)
 
     with e_c2:
         fs1, r1, n1 = scatter_ols_manual(pd.DataFrame({'Emosi Pos':epas,'G1A':df['G1A'],'G1A_CAT':df['G1A_CAT']}), 'Emosi Pos','G1A','Emosi Pos','NPS Score')
@@ -1257,7 +1257,7 @@ with t7:
             color_d=(NPS_C if cl_color=="Kategori NPS" else {u:c for u,c in zip(df_pca[color_col].dropna().unique(), px.colors.qualitative.Plotly)})
 
             cd_exist=[c for c in ['CABANG','PROV','G1A','E1A','F1A','G1A_CAT','Cluster'] if c in df_pca.columns]
-            fpc=px.scatter(df_pca,x='PC1',y='PC2', color=color_col,color_discrete_map=color_d, symbol='Cluster',opacity=0.7, labels={'PC1':f'Komponen Utama 1 ({var1*100:.1f}% variansi)', 'PC2':f'Komponen Utama 2 ({var2*100:.1f}% variansi)'})
+            fpc=px.scatter(df_pca,x='PC1',y='PC2', color=color_col,color_discrete_map=color_d, symbol='Cluster',opacity=0.7, labels={'PC1':f'Komponen Utama 1 ({var1*100:.1f}% variansi)', 'PC2':f'Komponen Utama 2 ({var2*100:.1f}% variansi)', color_col:cl_color})
             fpc.update_traces(marker=dict(size=8), customdata=df_pca[cd_exist].values, hovertemplate=('<b>%{customdata[0]}</b><br>Provinsi: %{customdata[1]}<br>NPS Score: %{customdata[2]:.1f}<br>Kepuasan: %{customdata[3]:.2f}<br>Loyalitas: %{customdata[4]:.2f}<br>Kategori NPS: %{customdata[5]}<br>Cluster: %{customdata[6]}<extra></extra>'))
             fpc.update_layout(height=500)
             st.plotly_chart(elo(fpc, f"Visualisasi Cluster 2D — Variansi Terjelaskan: {(var1+var2)*100:.1f}% (N={len(df_pca):,})",legend_below=True), use_container_width=True)
@@ -1375,7 +1375,7 @@ with t8:
             fs8b.update_layout(yaxis=dict(automargin=True))
         else:
             fs8b=px.box(df_seg8,x=sk8,y=mk8,color=sk8,points='outliers')
-            fs8b.update_layout(xaxis_tickangle=-20)
+            fs8b.update_layout(xaxis_tickangle=-20, xaxis_title=seg_label, yaxis_title=met_label, showlegend=False)
             fs8b.update_traces(hovertemplate='<b>%{x}</b><br>Nilai: %{y:.2f}<extra></extra>')
         st.plotly_chart(elo(fs8b,f"{met_label} per {seg_label} (N={len(df_seg8):,})",460),use_container_width=True)
         if n_hidden>0:
