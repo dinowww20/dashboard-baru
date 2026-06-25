@@ -409,9 +409,6 @@ def scatter_ols_manual(data, xcol, ycol, xlabel, ylabel, np_seed=42):
 def load_data():
     df = pd.read_csv('data/df_clean.csv', low_memory=False)
     cm = pd.read_csv('data/col_mapping.csv').set_index('kode')['nama_panjang'].to_dict()
-    np.random.seed(42)
-    months = pd.date_range('2023-01', periods=12, freq='MS')
-    df['Periode'] = np.random.choice([m.strftime('%Y-%m') for m in months], size=len(df))
     return df, cm
 
 try:
@@ -427,11 +424,6 @@ g_loy = df_raw['F1A'].mean()
 # SIDEBAR
 # ═══════════════════════════════════════════════════════
 with st.sidebar:
-    periods = sorted(df_raw['Periode'].unique())
-    sel_per = st.select_slider("Periode", key="sl_per", options=periods, value=(periods[0], periods[-1]))
-    per_range = periods[periods.index(sel_per[0]):periods.index(sel_per[1])+1]
-
-    st.markdown("---")
     st.markdown("**Benchmark**")
     NO_KOMP_LABEL = "Tidak Ada Kompetitor"
     komp_opts   = sorted([k for k in df_raw['KOMP'].dropna().unique() if k != NO_KOMP_LABEL])
@@ -469,7 +461,7 @@ with st.sidebar:
     st.markdown("---")
 
 # apply filter
-df = df_raw[df_raw['Periode'].isin(per_range)].copy()
+df = df_raw.copy()
 for col,sel in [('PROV',sel_prov),('KABKOTA',sel_kota),('CABANG',sel_cab),
     ('S1',sel_gender),('S2_2',sel_usia),('S4',sel_tenure),('S7',sel_frek),
     ('PANEL',sel_panel),('P4',sel_pekerjaan),('P3',sel_pendidikan),
@@ -714,13 +706,6 @@ with t1:
             st.caption("Korelasi Spearman (rank-based, ρ) dipilih karena variabel berskala ordinal/Likert dan beberapa terdistribusi sangat skewed — tidak mengasumsikan hubungan linear/distribusi normal seperti Pearson. N pairwise per pasangan kolom (exclude data kosong). " + (f"Beberapa pasangan tidak signifikan secara statistik (p≥0.05) — perlakukan koefisiennya sebagai indikatif saja." if (~sig_mask.values).any() else "Semua pasangan signifikan secara statistik (p<0.05)."))
         else:
             st.caption("Korelasi Spearman dengan N pairwise (per pasangan kolom, exclude data kosong). Install scipy untuk menampilkan p-value signifikansi.")
-
-    sh("Tren NPS, Kepuasan & Loyalitas per Periode")
-    tren=df.groupby('Periode').agg(NPS=('G1A','mean'),Kepuasan=('E1A','mean'), Loyalitas=('F1A','mean'),N=('SERIAL','count')).reset_index()
-    ftr=go.Figure()
-    for cn,cc,nl in [('NPS',C_XYZ,'NPS'),('Kepuasan','#34D399','Kepuasan'),('Loyalitas','#FBBF24','Loyalitas')]:
-        ftr.add_trace(go.Scatter(x=tren['Periode'],y=tren[cn],mode='lines+markers', name=nl,line=dict(color=cc,width=2.5),marker=dict(size=7), customdata=tren['N'], hovertemplate=f'<b>{nl}</b><br>Periode: %{{x}}<br>Nilai: %{{y:.2f}}<br>N responden: %{{customdata}}<extra></extra>'))
-    st.plotly_chart(elo(ftr,"",360),use_container_width=True)
 
     sh("NPS per Provinsi")
     pn=df.groupby('PROV').agg(NPS=('G1A','mean'),Kepuasan=('E1A','mean'), Loyalitas=('F1A','mean'),N=('SERIAL','count')).reset_index().sort_values('NPS')
