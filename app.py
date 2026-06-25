@@ -255,6 +255,20 @@ def ib(txt):
 
 def sh(txt): st.markdown(f"<div class='sec-hdr'>{txt}</div>", unsafe_allow_html=True)
 
+def add_ipa_quadrant_labels(fig, x_mid, y_mid, x_range, y_range):
+    """Tambahkan label nama kuadran langsung di 4 pojok area chart IPA Matrix,
+    supaya kategori kuadran terlihat tanpa perlu hover ke tiap titik."""
+    x_lo, x_hi = x_range; y_lo, y_hi = y_range
+    quad_labels = [
+        (x_lo + (x_mid-x_lo)*0.5, y_hi - (y_hi-y_mid)*0.12, "PERBAIKI"),
+        (x_hi - (x_hi-x_mid)*0.5, y_hi - (y_hi-y_mid)*0.12, "PERTAHANKAN"),
+        (x_lo + (x_mid-x_lo)*0.5, y_lo + (y_mid-y_lo)*0.12, "RENDAH"),
+        (x_hi - (x_hi-x_mid)*0.5, y_lo + (y_mid-y_lo)*0.12, "BERLEBIHAN"),
+    ]
+    for x,y,label in quad_labels:
+        fig.add_annotation(x=x, y=y, text=label, showarrow=False, font=dict(size=11, color=text_muted), opacity=0.55)
+    return fig
+
 def ipa_explainer(buf_pct=5):
     with st.expander("ℹ️ Cara membaca IPA Matrix"):
         st.markdown(f"""
@@ -803,12 +817,15 @@ with t2:
             ipa_explainer()
 
             fi2=px.scatter(idf2,x='Kepuasan',y='Kepentingan', color='Kuadran',color_discrete_map=qc2)
+            fi2.update_traces(marker=dict(size=10), customdata=idf2[['Item','N']].values, hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{y:.2f}<br>Kepuasan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>')
             if kv2:
                 fi2.add_trace(go.Scatter(x=kv2,y=iv2,mode='markers',name=target_komp,text=lb2, marker=dict(size=10,symbol='x',color=C_KOMP,line=dict(width=2)), hovertemplate='<b>%{text}</b><br>Kepuasan Komp: %{x:.2f}<extra></extra>'))
-            fi2.update_traces(marker=dict(size=10), customdata=idf2[['Item','N']].values, hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{y:.2f}<br>Kepuasan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>', selector=dict(mode='markers+text'))
             fi2.add_vline(x=ms2,line_dash="dash",line_color=border_col)
             fi2.add_hline(y=mi2,line_dash="dash",line_color=border_col)
             fi2.update_layout(height=560)
+            x_rng2=(min(np.nanmin(xv2),ms2)-0.3, max(np.nanmax(xv2),ms2)+0.3)
+            y_rng2=(min(np.nanmin(iv2),mi2)-0.3, max(np.nanmax(iv2),mi2)+0.3)
+            add_ipa_quadrant_labels(fi2, ms2, mi2, x_rng2, y_rng2)
             st.plotly_chart(elo(fi2,f"IPA Matrix — {sel_dim} (N={n_dfd:,})",legend_below=True),use_container_width=True)
 
             sh("Prioritas per Kuadran")
@@ -944,6 +961,9 @@ with t3:
     fib.add_vline(x=sb2_v,line_dash="dash",line_color=border_col)
     fib.add_hline(y=mb,line_dash="dash",line_color=border_col)
     fib.update_layout(height=600)
+    x_rngb=(min(np.nanmin(bxv),sb2_v)-0.3, max(np.nanmax(bxv),sb2_v)+0.3)
+    y_rngb=(min(np.nanmin(biv),mb)-0.3, max(np.nanmax(biv),mb)+0.3)
+    add_ipa_quadrant_labels(fib, sb2_v, mb, x_rngb, y_rngb)
     st.plotly_chart(elo(fib,f"IPA Matrix Brand (N={len(df):,})",legend_below=True),use_container_width=True)
     
     qcols_b=st.columns(5)
@@ -1034,12 +1054,15 @@ with t4:
             ipa_explainer()
 
             fi4=px.scatter(idf4,x='Kepuasan',y='Kepentingan',color='Kuadran',color_discrete_map=qtc)
+            fi4.update_traces(marker=dict(size=12), customdata=idf4[['Item_Full','N']].values, hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{y:.2f}<br>Kepuasan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>')
             if kv4:
                 fi4.add_trace(go.Scatter(x=kv4,y=iv4,mode='markers',name=target_komp,text=lb4_full, marker=dict(size=10,symbol='x',color=C_KOMP,line=dict(width=2)), hovertemplate='<b>%{text}</b><br>Kepuasan Komp: %{x:.2f}<extra></extra>'))
-            fi4.update_traces(marker=dict(size=12), customdata=idf4[['Item_Full','N']].values, hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{y:.2f}<br>Kepuasan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>')
             fi4.add_vline(x=ms4,line_dash="dash",line_color=border_col)
             fi4.add_hline(y=mi4,line_dash="dash",line_color=border_col)
             fi4.update_layout(height=560)
+            x_rng4=(min(np.nanmin(xv4),ms4)-0.3, max(np.nanmax(xv4),ms4)+0.3)
+            y_rng4=(min(np.nanmin(iv4),mi4)-0.3, max(np.nanmax(iv4),mi4)+0.3)
+            add_ipa_quadrant_labels(fi4, ms4, mi4, x_rng4, y_rng4)
             st.plotly_chart(elo(fi4,f"IPA — {sel_tp} (N={n_dft4:,})",legend_below=True),use_container_width=True)
 
             sh("Prioritas per Kuadran")
@@ -1428,6 +1451,57 @@ with t8:
     ftj.update_traces(texttemplate='%{x:.2f}',textposition='outside', customdata=tjagg['N'].values, hovertemplate='<b>%{y}</b><br>Loyalitas Rata-rata: %{x:.3f}<br>N responden: %{customdata}<extra></extra>')
     ftj.update_xaxes(range=[4.5,6.6]); ftj.update_layout(yaxis=dict(automargin=True))
     st.plotly_chart(elo(ftj,f"Loyalitas per Tujuan Buka Rekening (N={len(df):,})", 460),use_container_width=True)
+
+    st.markdown("---")
+    sh("💡 Peluang Segmen untuk Pemasaran & Retensi")
+    st.caption("Sintesis deskriptif dari kombinasi segmen demografi yang sudah ditampilkan di atas — **bukan model prediktif atau kausal**. Tujuannya memberi titik awal investigasi, bukan keputusan akhir.")
+    with st.expander("ℹ️ Catatan metodologi sintesis ini"):
+        st.markdown("""
+- Segmen dibentuk dari kombinasi 2 variabel demografi (dipilih di bawah), dirata-rata NPS-nya.
+- Hanya kombinasi dengan **N≥15 responden** yang ditampilkan, supaya tidak menyoroti segmen yang skornya cuma kebetulan sampling kecil (lihat pembahasan ukuran sampel di Tab 1/2).
+- "NPS tinggi + N besar" mengindikasikan segmen yang **secara historis puas dan jumlahnya material** — kandidat masuk akal untuk fokus akuisisi/ekspansi, tapi ini korelasi deskriptif, bukan bukti bahwa menargetkan segmen ini *akan* menghasilkan pertumbuhan.
+- "NPS rendah + N besar" mengindikasikan segmen besar yang kepuasannya relatif tertinggal — kandidat investigasi *root cause*, bukan otomatis kesimpulan "segmen ini bermasalah".
+""")
+    sg_b1,sg_b2 = st.columns(2)
+    with sg_b1:
+        seg_a = st.selectbox("Segmen Baris 1:", key="sb_segA", options=['S2_2 → Usia','P3 → Pendidikan','P4 → Pekerjaan','S1 → Gender','S7 → Frekuensi Transaksi'])
+    with sg_b2:
+        seg_b = st.selectbox("Segmen Baris 2:", key="sb_segB", options=['P5 → SES / Pengeluaran','P6 → Penghasilan','PROV → Provinsi','P1 → Status Pernikahan'])
+    ska=seg_a.split(' → ')[0].strip(); skb=seg_b.split(' → ')[0].strip()
+    lbla=seg_a.split(' → ')[1].strip(); lblb=seg_b.split(' → ')[1].strip()
+    MIN_N_PELUANG=15
+    if ska in df.columns and skb in df.columns:
+        seg_combo = df.groupby([ska,skb]).agg(NPS=('G1A','mean'), Kepuasan=('E1A','mean'), N=('SERIAL','count')).reset_index()
+        seg_combo = seg_combo[seg_combo['N']>=MIN_N_PELUANG]
+        if len(seg_combo)>=2:
+            def _short_cat(v, maxlen=18):
+                v=str(v)
+                v=re.sub(r'^([A-Za-z0-9.]+)\s*:\s*.*$', r'\1', v)  # ambil kode depan jika format "KODE : deskripsi"
+                return v if len(v)<=maxlen else v[:maxlen-1]+'…'
+            seg_combo['Segmen'] = seg_combo[ska].astype(str) + " × " + seg_combo[skb].astype(str)
+            seg_combo['Segmen_Short'] = seg_combo[ska].apply(_short_cat) + " × " + seg_combo[skb].apply(_short_cat)
+            top_peluang = seg_combo.nlargest(5,'NPS')
+            bot_peluang = seg_combo.nsmallest(5,'NPS')
+            pc1,pc2 = st.columns(2)
+            with pc1:
+                st.markdown(f"<span style='color:#10B981;font-weight:800;font-size:14px'>🟢 Top 5 Segmen NPS Tertinggi (N≥{MIN_N_PELUANG})</span>", unsafe_allow_html=True)
+                tp_sorted = top_peluang.sort_values('NPS')
+                ftp = px.bar(tp_sorted, x='NPS', y='Segmen_Short', orientation='h', text='NPS', color_discrete_sequence=[C_XYZ])
+                ftp.update_traces(texttemplate='%{x:.1f}', textposition='outside', customdata=tp_sorted[['Segmen','N','Kepuasan']].values, hovertemplate='<b>%{customdata[0]}</b><br>NPS: %{x:.2f}<br>N: %{customdata[1]:.0f}<br>Kepuasan: %{customdata[2]:.2f}<extra></extra>')
+                ftp.update_layout(yaxis=dict(automargin=True))
+                st.plotly_chart(elo(ftp,h=320),use_container_width=True)
+            with pc2:
+                st.markdown(f"<span style='color:#EF4444;font-weight:800;font-size:14px'>🔴 Top 5 Segmen NPS Terendah (N≥{MIN_N_PELUANG})</span>", unsafe_allow_html=True)
+                bp_sorted = bot_peluang.sort_values('NPS',ascending=False)
+                fbp = px.bar(bp_sorted, x='NPS', y='Segmen_Short', orientation='h', text='NPS', color_discrete_sequence=[C_KOMP])
+                fbp.update_traces(texttemplate='%{x:.1f}', textposition='outside', customdata=bp_sorted[['Segmen','N','Kepuasan']].values, hovertemplate='<b>%{customdata[0]}</b><br>NPS: %{x:.2f}<br>N: %{customdata[1]:.0f}<br>Kepuasan: %{customdata[2]:.2f}<extra></extra>')
+                fbp.update_layout(yaxis=dict(automargin=True))
+                st.plotly_chart(elo(fbp,h=320),use_container_width=True)
+            best = top_peluang.iloc[top_peluang['NPS'].argmax()]
+            worst = bot_peluang.iloc[bot_peluang['NPS'].argmin()]
+            ib(f"Segmen **{best['Segmen']}** (N={best['N']:.0f}) punya NPS tertinggi ({best['NPS']:.1f}) — kandidat masuk akal untuk fokus akuisisi/ekspansi, tapi validasi lapangan tetap diperlukan. Segmen **{worst['Segmen']}** (N={worst['N']:.0f}) punya NPS terendah ({worst['NPS']:.1f}) — layak diinvestigasi lebih lanjut akar masalahnya sebelum diambil tindakan.")
+        else:
+            st.info(f"Tidak cukup kombinasi segmen dengan N≥{MIN_N_PELUANG} untuk kombinasi ini pada filter saat ini — coba ganti pilihan segmen atau perlebar filter di sidebar.")
 
 # ═══════════════════════════════════════════════════════
 # TAB 9 — VOICE OF CUSTOMER
