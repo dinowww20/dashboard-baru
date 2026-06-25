@@ -24,7 +24,7 @@ except ImportError:
     SK_OK = False
 
 try:
-    from scipy.stats import pearsonr, linregress
+    from scipy.stats import spearmanr, linregress
     SCIPY_OK = True
 except ImportError:
     SCIPY_OK = False
@@ -255,6 +255,22 @@ def ib(txt):
 
 def sh(txt): st.markdown(f"<div class='sec-hdr'>{txt}</div>", unsafe_allow_html=True)
 
+def ipa_explainer(buf_pct=5):
+    with st.expander("ℹ️ Cara membaca IPA Matrix"):
+        st.markdown(f"""
+**Sumbu X — Kepuasan**: rata-rata skor kinerja aktual yang dirasakan nasabah untuk tiap item (skala 1-6).
+**Sumbu Y — Kepentingan**: rata-rata skor seberapa penting item itu menurut nasabah (skala 1-6).
+
+Garis putus-putus adalah rata-rata Kepentingan dan Kepuasan dari seluruh item yang ditampilkan — **bukan ambang baku**, jadi posisinya bergeser kalau filter atau cakupan item berubah.
+
+**4 kuadran:**
+- 🔴 **Perbaiki** — penting tapi kepuasan rendah → prioritas utama
+- 🟢 **Pertahankan** — penting dan kepuasan sudah tinggi → jaga performa
+- ⚪ **Rendah** — kurang penting dan kepuasan rendah → bukan prioritas
+- 🟡 **Berlebihan** — kurang penting tapi kepuasan tinggi → sumber daya mungkin bisa dialihkan
+- ⚫ **Netral** — item dalam radius ±{buf_pct}% dari kedua garis rata-rata; bedanya dengan garis pembagi terlalu kecil untuk dipastikan masuk kuadran tertentu, jadi tidak dipaksa diklasifikasikan agar tidak memberi kesan presisi yang sebenarnya tidak ada.
+""")
+
 def elo(fig, title="", h=None, legend_below=False):
     title_text = f"<b>{title}</b>" if title else ""
     legend_pre_set = fig.layout.legend.y is not None
@@ -318,8 +334,12 @@ def calc_nps(s):
     return round((pr-dt)/t*100,1),round(pr/t*100,1),round(ps/t*100,1),round(dt/t*100,1)
 
 def corr_with_stats(data):
-    """Hitung matriks korelasi Pearson beserta p-value dan N pairwise (bukan N global)
-    supaya hover chart menampilkan basis statistik yang akurat per pasangan kolom."""
+    """Hitung matriks korelasi Spearman beserta p-value dan N pairwise (bukan N global)
+    supaya hover chart menampilkan basis statistik yang akurat per pasangan kolom.
+    Spearman dipilih (bukan Pearson) karena variabel di sini berskala ordinal/Likert
+    (NPS 0-10, Kepuasan/Loyalitas 1-6) dan beberapa sangat skewed — Spearman hanya
+    mengasumsikan hubungan monotonik berdasar ranking, tidak mengasumsikan jarak antar
+    skala sama atau distribusi mendekati normal seperti yang disyaratkan Pearson."""
     cols = data.columns.tolist()
     r_mat = pd.DataFrame(np.eye(len(cols)), index=cols, columns=cols)
     p_mat = pd.DataFrame(np.zeros((len(cols),len(cols))), index=cols, columns=cols)
@@ -334,9 +354,9 @@ def corr_with_stats(data):
             if n_pair<3 or sub[c1].std()==0 or sub[c2].std()==0:
                 r_mat.loc[c1,c2]=np.nan; p_mat.loc[c1,c2]=np.nan; continue
             if SCIPY_OK:
-                r,p = pearsonr(sub[c1],sub[c2])
+                r,p = spearmanr(sub[c1],sub[c2])
             else:
-                r,p = sub[c1].corr(sub[c2]), np.nan
+                r,p = sub[c1].corr(sub[c2],method='spearman'), np.nan
             r_mat.loc[c1,c2]=r; p_mat.loc[c1,c2]=p
     return r_mat, p_mat, n_mat
 
@@ -473,7 +493,7 @@ def build_ctx(dff, dhk):
     tc = [c for c in dff.columns if c.startswith("OVR_") and "_XYZ" in c and c not in ["OVR_KC_OPERASIONAL_XYZ","OVR_KC_PARKIR_XYZ","OVR_KC_BANKINGHALL_XYZ","OVR_KC_TOILET_XYZ"]]
     cs = dff.groupby('CABANG')[tc].mean().mean(axis=1) if tc else pd.Series(dtype=float)
     cs_n = dff.groupby('CABANG').size()
-    cs_rel = cs[cs_n>=10]  # hanya cabang dgn sampel cukup, konsisten dgn perbaikan #2 sebelumnya
+    cs_rel = cs[cs_n>=15]  # selaras dgn ambang Top/Bottom 5 Cabang di Tab 1 (MIN_N_CABANG)
     t5 = [(idx,round(v,2),int(cs_n[idx])) for idx,v in cs_rel.nlargest(5).items()] if len(cs_rel)>0 else []
     b5 = [(idx,round(v,2),int(cs_n[idx])) for idx,v in cs_rel.nsmallest(5).items()] if len(cs_rel)>0 else []
     pc = clean_cmt(dff[dff['G1A_CAT']=='Promoter']['G1B']).head(5).tolist() if 'G1B' in dff.columns else []
@@ -522,14 +542,14 @@ def build_ctx(dff, dhk):
         f"- Skor dimensi layanan XYZ (skala 1-6): {json.dumps(om)}",
     ]
     if emo_line: ctx_parts.append(emo_line)
-    if t5: ctx_parts.append(f"- Top 5 cabang terbaik (N≥10): {t5}")
-    if b5: ctx_parts.append(f"- Bottom 5 cabang (N≥10): {b5}")
+    if t5: ctx_parts.append(f"- Top 5 cabang terbaik (N≥15): {t5}")
+    if b5: ctx_parts.append(f"- Bottom 5 cabang (N≥15): {b5}")
     if prov_lines: ctx_parts.append("- Breakdown per provinsi:\n  " + "\n  ".join(prov_lines))
     if demo_lines: ctx_parts.append("- Breakdown demografi:\n  " + "\n  ".join(demo_lines))
     if wait_lines: ctx_parts.append("- Waktu tunggu:\n  " + "\n  ".join(wait_lines))
     ctx_parts.append(f"- Sampel alasan Promoter (verbatim): {pc}")
     ctx_parts.append(f"- Sampel alasan Detractor (verbatim): {dc}")
-    ctx_parts.append("\nCatatan: hanya cabang dengan N≥10 responden yang ditampilkan di ranking cabang, karena cabang dengan sampel lebih kecil rata-ratanya kurang stabil secara statistik. Bila ditanya cabang spesifik yang tidak tercantum, sampaikan bahwa data rinci cabang tersebut tidak tersedia dalam ringkasan ini.")
+    ctx_parts.append("\nCatatan: hanya cabang dengan N≥15 responden yang ditampilkan di ranking cabang, karena cabang dengan sampel lebih kecil rata-ratanya kurang stabil secara statistik. Bila ditanya cabang spesifik yang tidak tercantum, sampaikan bahwa data rinci cabang tersebut tidak tersedia dalam ringkasan ini.")
     return "\n".join(ctx_parts)
 
 def call_ai(msgs, ctx):
@@ -673,13 +693,13 @@ with t1:
         sig_mask=(p_mat<0.05) | (np.eye(len(r_mat.columns),dtype=bool))
         fco=px.imshow(r_mat,text_auto=".2f", color_continuous_scale='Greens',aspect='auto',zmin=-1,zmax=1)
         customdata_corr=np.dstack([p_mat.values, n_mat.values, sig_mask.values])
-        fco.update_traces(customdata=customdata_corr, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>Korelasi (r): %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
-        st.plotly_chart(elo(fco,f"Korelasi Pearson antar Dimensi (N≈{n_tot:,}, p-value & N tepat di hover)",h=380),use_container_width=True)
+        fco.update_traces(customdata=customdata_corr, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>Korelasi Spearman (ρ): %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
+        st.plotly_chart(elo(fco,f"Korelasi Spearman antar Dimensi (N≈{n_tot:,}, p-value & N tepat di hover)",h=380),use_container_width=True)
         if SCIPY_OK:
             n_not_sig=int((~sig_mask.values).sum()/2 - len(r_mat)/2) if len(r_mat)>0 else 0
-            st.caption("Korelasi dihitung Pearson dengan N pairwise (per pasangan kolom, exclude data kosong). " + (f"Beberapa pasangan tidak signifikan secara statistik (p≥0.05) — perlakukan koefisiennya sebagai indikatif saja." if (~sig_mask.values).any() else "Semua pasangan signifikan secara statistik (p<0.05)."))
+            st.caption("Korelasi Spearman (rank-based, ρ) dipilih karena variabel berskala ordinal/Likert dan beberapa terdistribusi sangat skewed — tidak mengasumsikan hubungan linear/distribusi normal seperti Pearson. N pairwise per pasangan kolom (exclude data kosong). " + (f"Beberapa pasangan tidak signifikan secara statistik (p≥0.05) — perlakukan koefisiennya sebagai indikatif saja." if (~sig_mask.values).any() else "Semua pasangan signifikan secara statistik (p<0.05)."))
         else:
-            st.caption("Korelasi dihitung Pearson dengan N pairwise (per pasangan kolom, exclude data kosong). Install scipy untuk menampilkan p-value signifikansi.")
+            st.caption("Korelasi Spearman dengan N pairwise (per pasangan kolom, exclude data kosong). Install scipy untuk menampilkan p-value signifikansi.")
 
     sh("Tren NPS, Kepuasan & Loyalitas per Periode")
     tren=df.groupby('Periode').agg(NPS=('G1A','mean'),Kepuasan=('E1A','mean'), Loyalitas=('F1A','mean'),N=('SERIAL','count')).reset_index()
@@ -780,7 +800,8 @@ with t2:
                 else: return "Berlebihan"
             idf2['Kuadran']=idf2.apply(q2,axis=1)
             qc2={"Perbaiki":C_KOMP,"Pertahankan":"#10B981","Rendah":C_IMP,"Berlebihan":"#F59E0B","Netral":"#9CA3AF"}
-            
+            ipa_explainer()
+
             fi2=px.scatter(idf2,x='Kepuasan',y='Kepentingan', color='Kuadran',color_discrete_map=qc2)
             if kv2:
                 fi2.add_trace(go.Scatter(x=kv2,y=iv2,mode='markers',name=target_komp,text=lb2, marker=dict(size=10,symbol='x',color=C_KOMP,line=dict(width=2)), hovertemplate='<b>%{text}</b><br>Kepuasan Komp: %{x:.2f}<extra></extra>'))
@@ -916,7 +937,8 @@ with t3:
         else: return "Berlebihan"
     bdf['Kuadran']=bdf.apply(bq,axis=1)
     qcb={"Perbaiki":C_KOMP,"Pertahankan":"#10B981","Rendah":C_IMP,"Berlebihan":"#F59E0B","Netral":"#9CA3AF"}
-    
+    ipa_explainer()
+
     fib=px.scatter(bdf,x='Kepuasan',y='Kepentingan',color='Kuadran',color_discrete_map=qcb)
     fib.update_traces(marker=dict(size=12), customdata=bdf[['Label_Full','N']].values, hovertemplate='<b>%{customdata[0]}</b><br>Kepentingan: %{y:.2f}<br>Kepuasan: %{x:.2f}<br>N: %{customdata[1]}<extra></extra>')
     fib.add_vline(x=sb2_v,line_dash="dash",line_color=border_col)
@@ -1009,7 +1031,8 @@ with t4:
                 else: return "Berlebihan"
             idf4['Kuadran']=idf4.apply(tq4,axis=1)
             qtc={"Perbaiki":C_KOMP,"Pertahankan":"#10B981","Rendah":C_IMP,"Berlebihan":"#F59E0B","Netral":"#9CA3AF"}
-            
+            ipa_explainer()
+
             fi4=px.scatter(idf4,x='Kepuasan',y='Kepentingan',color='Kuadran',color_discrete_map=qtc)
             if kv4:
                 fi4.add_trace(go.Scatter(x=kv4,y=iv4,mode='markers',name=target_komp,text=lb4_full, marker=dict(size=10,symbol='x',color=C_KOMP,line=dict(width=2)), hovertemplate='<b>%{text}</b><br>Kepuasan Komp: %{x:.2f}<extra></extra>'))
@@ -1120,8 +1143,8 @@ with t5:
     with e_c1:
         fec=px.imshow(r_mat5,text_auto=".2f",color_continuous_scale='Greens',aspect='auto',zmin=-1,zmax=1)
         customdata_cce=np.dstack([p_mat5.values, n_mat5.values])
-        fec.update_traces(customdata=customdata_cce, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
-        st.plotly_chart(elo(fec,"Korelasi Pearson (hover: p-value & N)",h=340),use_container_width=True)
+        fec.update_traces(customdata=customdata_cce, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>ρ (Spearman) = %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
+        st.plotly_chart(elo(fec,"Korelasi Spearman (hover: p-value & N)",h=340),use_container_width=True)
 
     with e_c2:
         fs1, r1, n1 = scatter_ols_manual(pd.DataFrame({'Emosi Pos':epas,'G1A':df['G1A'],'G1A_CAT':df['G1A_CAT']}), 'Emosi Pos','G1A','Emosi Pos','NPS Score')
@@ -1206,6 +1229,13 @@ with t7:
     if not SK_OK:
         st.warning("scikit-learn tidak terinstal. Tambahkan ke requirements.txt.")
     else:
+        with st.expander("ℹ️ Catatan metodologi Clustering"):
+            st.markdown("""
+- Semua fitur distandarisasi (**z-score / StandardScaler**) sebelum clustering, supaya variabel dengan skala beda jauh (misal Usia 17-60 vs NPS 0-10) tidak mendominasi jarak antar titik.
+- K-Means mengasumsikan cluster berbentuk bola (Euclidean) dengan variance merata antar cluster — asumsi ini bisa kurang terpenuhi kalau sebagian besar skor menumpuk di nilai tinggi (*ceiling effect*), yang memang terjadi pada NPS dan Kepuasan di data ini.
+- Gunakan **Elbow Chart** di bawah untuk membantu memilih jumlah cluster (K) — cari titik di mana penurunan inertia mulai melandai ("siku").
+- Cluster yang terbentuk bisa jadi cuma mencerminkan *level kepuasan umum* (gradasi satu sumbu) bukan segmen perilaku yang berbeda secara kualitatif — periksa tabel profil di bawah untuk menilai apakah pembagian ini bermakna untuk kebutuhan Anda.
+""")
         cl1,cl2,cl3=st.columns(3)
         with cl1: n_cl=st.slider("Jumlah Cluster:",2,6,3,key="sl_ncl")
         with cl2:
