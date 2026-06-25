@@ -24,7 +24,7 @@ except ImportError:
     SK_OK = False
 
 try:
-    from scipy.stats import pearsonr
+    from scipy.stats import pearsonr, linregress
     SCIPY_OK = True
 except ImportError:
     SCIPY_OK = False
@@ -255,18 +255,33 @@ def ib(txt):
 
 def sh(txt): st.markdown(f"<div class='sec-hdr'>{txt}</div>", unsafe_allow_html=True)
 
-def elo(fig, title="", h=None):
+def elo(fig, title="", h=None, legend_below=False):
     title_text = f"<b>{title}</b>" if title else ""
-    
+    legend_pre_set = fig.layout.legend.y is not None
+    margin_pre_set = fig.layout.margin.b is not None
+
+    if legend_below:
+        legend_kw = dict(font=dict(color=text_muted, size=12), bgcolor=bg_panel,
+                          bordercolor=border_col, orientation='h', yanchor='top', y=-0.18, xanchor='center', x=0.5)
+        margin_kw = dict(t=50, b=64, l=14, r=14)
+    else:
+        legend_kw = dict(font=dict(color=text_muted, size=12), bgcolor=bg_panel,
+                          bordercolor=border_col, orientation='h', yanchor='bottom', y=1.10, xanchor='right', x=1)
+        margin_kw = dict(t=72, b=20, l=14, r=14)
+
+    if legend_pre_set:
+        # Chart ini sudah punya posisi legend custom (misal radar/pie dgn legend di bawah)
+        # sebelum elo() dipanggil — jangan timpa posisinya, cukup samakan styling warna/font.
+        legend_kw = dict(font=dict(color=text_muted, size=12), bgcolor=bg_panel, bordercolor=border_col)
+
     kw = dict(
-        title=dict(text=title_text, font=dict(size=16, color=text_main)),
+        title=dict(text=title_text, font=dict(size=16, color=text_main), y=0.97, yanchor='top'),
         template=chart_template, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-        margin=dict(t=50, b=20, l=14, r=14),
         font=dict(color=text_muted, size=13, family='Inter, sans-serif'),
         hoverlabel=dict(bgcolor=bg_panel, font_color=text_main, font_size=14, bordercolor=border_col),
-        legend=dict(font=dict(color=text_muted, size=12), bgcolor=bg_panel,
-                    bordercolor=border_col, orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+        legend=legend_kw,
     )
+    if not margin_pre_set: kw['margin'] = margin_kw
     if h: kw['height'] = h
     fig.update_layout(**kw)
     fig.update_xaxes(showgrid=True, gridcolor=GRID, zeroline=False, automargin=True, tickfont=dict(color=text_muted, size=12))
@@ -325,6 +340,34 @@ def corr_with_stats(data):
             r_mat.loc[c1,c2]=r; p_mat.loc[c1,c2]=p
     return r_mat, p_mat, n_mat
 
+def scatter_ols_manual(data, xcol, ycol, xlabel, ylabel, np_seed=42):
+    """Scatter dgn jitter visual ringan pada Y diskrit (utk keterbacaan titik yg numpuk)
+    + garis OLS dihitung dari data ASLI tanpa jitter (scipy.stats.linregress, tidak
+    bergantung statsmodels spt trendline='ols' bawaan plotly yg bisa crash jika
+    statsmodels tidak terinstal). Warna titik berdasar kategori NPS bila kolom
+    G1A_CAT tersedia di data, kalau tidak pakai warna tunggal."""
+    has_cat = 'G1A_CAT' in data.columns
+    cols = [xcol,ycol] + (['G1A_CAT'] if has_cat else [])
+    sub = data[cols].dropna()
+    fig = go.Figure()
+    rng = np.random.RandomState(np_seed)
+    y_jitter = sub[ycol].values.astype(float) + rng.uniform(-0.12,0.12,size=len(sub))
+    if has_cat:
+        for cat in ['Promoter','Passive','Detractor']:
+            m = sub['G1A_CAT']==cat
+            if m.sum()==0: continue
+            fig.add_trace(go.Scatter(x=sub.loc[m,xcol],y=y_jitter[m.values],mode='markers', name=cat,marker=dict(color=NPS_C.get(cat),size=6,opacity=0.45), hovertemplate=f'{xlabel}: %{{x:.2f}}<br>{ylabel}: %{{customdata:.1f}}<extra></extra>', customdata=sub.loc[m,ycol]))
+    else:
+        fig.add_trace(go.Scatter(x=sub[xcol],y=y_jitter,mode='markers', name=ylabel,marker=dict(color=C_XYZ,size=6,opacity=0.45), hovertemplate=f'{xlabel}: %{{x:.2f}}<br>{ylabel}: %{{customdata:.1f}}<extra></extra>', customdata=sub[ycol]))
+    r_line = None
+    if SCIPY_OK and len(sub)>=3 and sub[xcol].std()>0:
+        slope,intercept,r_val,p_val,_ = linregress(sub[xcol],sub[ycol])
+        xr = np.linspace(sub[xcol].min(),sub[xcol].max(),50)
+        fig.add_trace(go.Scatter(x=xr,y=intercept+slope*xr,mode='lines',name='OLS (data asli)', line=dict(color=text_main,width=2,dash='dash'), hovertemplate='Garis OLS<extra></extra>'))
+        r_line = (r_val,p_val)
+    fig.update_layout(xaxis_title=xlabel,yaxis_title=ylabel)
+    return fig, r_line, len(sub)
+
 # ═══════════════════════════════════════════════════════
 # LOAD DATA
 # ═══════════════════════════════════════════════════════
@@ -362,11 +405,12 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**Lokasi**")
-    sel_prov = st.multiselect("Provinsi", key="ms_prov", options=sorted(df_raw['PROV'].dropna().unique()))
+    sel_prov = st.multiselect("Provinsi", key="ms_prov", options=sorted(df_raw['PROV'].dropna().unique()), help="💡 Ketik beberapa huruf untuk mencari dari daftar.")
     kpool = df_raw[df_raw['PROV'].isin(sel_prov)] if sel_prov else df_raw
-    sel_kota = st.multiselect("Kab/Kota", key="ms_kota", options=sorted(kpool['KABKOTA'].dropna().unique()))
+    sel_kota = st.multiselect("Kab/Kota", key="ms_kota", options=sorted(kpool['KABKOTA'].dropna().unique()), help="💡 Ketik beberapa huruf untuk mencari dari daftar. Pilih Provinsi dulu untuk mempersempit pilihan.")
     cpool = kpool[kpool['KABKOTA'].isin(sel_kota)] if sel_kota else kpool
-    sel_cab = st.multiselect("Cabang", key="ms_cab", options=sorted(cpool['CABANG'].dropna().unique()))
+    cab_opts=sorted(cpool['CABANG'].dropna().unique())
+    sel_cab = st.multiselect(f"Cabang ({len(cab_opts)} opsi)", key="ms_cab", options=cab_opts, help="💡 Ketik nama cabang untuk mencari (misal 'Bandung'). Pilih Provinsi/Kab-Kota dulu untuk mempersempit daftar ini.")
 
     st.markdown("---")
     with st.expander("Profil Responden"):
@@ -422,17 +466,71 @@ def get_dm(dfr):
 DM = get_dm(df_raw)
 
 def build_ctx(dff, dhk):
-    ns,pp,_,pd2 = calc_nps(dff['G1A_CAT'])
-    nk,pk,_,dk  = calc_nps(dhk['G1C_CAT']) if len(dhk)>0 else (0,0,0,0)
+    ns,pp,pv,pd2 = calc_nps(dff['G1A_CAT'])
+    nk,pk,pvk,dk  = calc_nps(dhk['G1C_CAT']) if len(dhk)>0 else (0,0,0,0)
     oc = [c for c in dff.columns if c.startswith("OVR_") and "_XYZ" in c]
     om = {nama_kolom(c.replace("OVR_","").replace("_XYZ","")):round(dff[c].mean(),2) for c in oc if c in dff.columns}
     tc = [c for c in dff.columns if c.startswith("OVR_") and "_XYZ" in c and c not in ["OVR_KC_OPERASIONAL_XYZ","OVR_KC_PARKIR_XYZ","OVR_KC_BANKINGHALL_XYZ","OVR_KC_TOILET_XYZ"]]
     cs = dff.groupby('CABANG')[tc].mean().mean(axis=1) if tc else pd.Series(dtype=float)
-    t3 = cs.nlargest(3).index.tolist()  if len(cs)>0 else []
-    b3 = cs.nsmallest(3).index.tolist() if len(cs)>0 else []
+    cs_n = dff.groupby('CABANG').size()
+    cs_rel = cs[cs_n>=10]  # hanya cabang dgn sampel cukup, konsisten dgn perbaikan #2 sebelumnya
+    t5 = [(idx,round(v,2),int(cs_n[idx])) for idx,v in cs_rel.nlargest(5).items()] if len(cs_rel)>0 else []
+    b5 = [(idx,round(v,2),int(cs_n[idx])) for idx,v in cs_rel.nsmallest(5).items()] if len(cs_rel)>0 else []
     pc = clean_cmt(dff[dff['G1A_CAT']=='Promoter']['G1B']).head(5).tolist() if 'G1B' in dff.columns else []
     dc = clean_cmt(dff[dff['G1A_CAT']=='Detractor']['G1B']).head(5).tolist() if 'G1B' in dff.columns else []
-    return (f"DATA RINGKASAN BANK XYZ (filter aktif):\n- Total responden: {len(dff):,}\n- NPS XYZ: {ns} (Promoter {pp}%, Detractor {pd2}%)\n- NPS Kompetitor: {nk} (Promoter {pk}%, Detractor {dk}%)\n- Gap NPS: {round(ns-nk,1)} poin\n- Kepuasan XYZ (1-6): {round(dff['E1A'].mean(),2)}\n- Loyalitas XYZ (1-6): {round(dff['F1A'].mean(),2)}\n- Skor dimensi layanan: {json.dumps(om)}\n- Top 3 cabang terbaik: {t3}\n- Bottom 3 cabang: {b3}\n- Sampel alasan Promoter: {pc}\n- Sampel alasan Detractor: {dc}\n- Kompetitor dibandingkan: {target_komp}")
+
+    # Breakdown per provinsi (NPS/Kepuasan/Loyalitas) — biasanya <20 provinsi, aman utk konteks
+    prov_lines = []
+    if 'PROV' in dff.columns:
+        pg = dff.groupby('PROV').agg(NPS=('G1A','mean'),Kepuasan=('E1A','mean'),N=('SERIAL','count')).round(2)
+        prov_lines = [f"{idx}: NPS={r['NPS']}, Kepuasan={r['Kepuasan']}, N={int(r['N'])}" for idx,r in pg.iterrows()]
+
+    # Breakdown demografi ringkas: gender, kategori usia, pendidikan -> NPS
+    demo_lines = []
+    for col,label in [('S1','Gender'),('S2_2','Usia'),('P3','Pendidikan'),('S7','Frekuensi Transaksi')]:
+        if col in dff.columns:
+            dg = dff.groupby(col)['G1A'].agg(['mean','count'])
+            dg = dg[dg['count']>=10]
+            if len(dg)>0:
+                items = [f"{idx}(N={int(r['count'])}):{round(r['mean'],1)}" for idx,r in dg.iterrows()]
+                demo_lines.append(f"{label} -> NPS: " + ", ".join(items))
+
+    # Waktu tunggu Teller/CS: aktual vs toleransi, dan jumlah cabang yg melebihi toleransi
+    wait_lines = []
+    if 'PANEL' in dff.columns and 'TL5' in dff.columns:
+        dft = dff[dff['PANEL'].astype(str).str.contains('Teller',case=False,na=False)].dropna(subset=['TL5','TL6'])
+        if len(dft)>0:
+            wait_lines.append(f"Teller: aktual rata-rata={dft['TL5'].mean():.1f} mnt (median={dft['TL5'].median():.1f}), toleransi={dft['TL6'].mean():.1f} mnt, N={len(dft)}")
+        dfc = dff[dff['PANEL'].astype(str).str.contains('CS',case=False,na=False)].dropna(subset=['CS5','CS6'])
+        if len(dfc)>0:
+            wait_lines.append(f"CS: aktual rata-rata={dfc['CS5'].mean():.1f} mnt (median={dfc['CS5'].median():.1f}), toleransi={dfc['CS6'].mean():.1f} mnt, N={len(dfc)}")
+
+    # Emosi positif/negatif XYZ vs kompetitor (proxy dari kolom T_I1A_* bila ada)
+    emo_line = ""
+    epc=[c for c in["T_I1A_2","T_I1A_5","T_I1A_8","T_I1A_11","T_I1A_14","T_I1A_17","T_I1A_20","T_I1A_23","T_I1A_26"] if c in dff.columns]
+    enc=[c for c in["T_I1A_29","T_I1A_32","T_I1A_35","T_I1A_38","T_I1A_41","T_I1A_44","T_I1A_47"] if c in dff.columns]
+    if epc and enc:
+        emo_line = f"- Emosi Positif XYZ (skala 1-6): {dff[epc].mean(axis=1).mean():.2f} | Emosi Negatif XYZ: {dff[enc].mean(axis=1).mean():.2f}"
+
+    ctx_parts = [
+        f"DATA RINGKASAN BANK XYZ (filter aktif: {target_komp}):",
+        f"- Total responden: {len(dff):,}",
+        f"- NPS XYZ: {ns} (Promoter {pp}%, Passive {pv}%, Detractor {pd2}%)",
+        f"- NPS Kompetitor: {nk} (Promoter {pk}%, Passive {pvk}%, Detractor {dk}%) dari N={len(dhk):,} responden yang punya data kompetitor",
+        f"- Gap NPS: {round(ns-nk,1)} poin",
+        f"- Kepuasan XYZ (skala 1-6): {round(dff['E1A'].mean(),2)} | Loyalitas XYZ: {round(dff['F1A'].mean(),2)}",
+        f"- Skor dimensi layanan XYZ (skala 1-6): {json.dumps(om)}",
+    ]
+    if emo_line: ctx_parts.append(emo_line)
+    if t5: ctx_parts.append(f"- Top 5 cabang terbaik (N≥10): {t5}")
+    if b5: ctx_parts.append(f"- Bottom 5 cabang (N≥10): {b5}")
+    if prov_lines: ctx_parts.append("- Breakdown per provinsi:\n  " + "\n  ".join(prov_lines))
+    if demo_lines: ctx_parts.append("- Breakdown demografi:\n  " + "\n  ".join(demo_lines))
+    if wait_lines: ctx_parts.append("- Waktu tunggu:\n  " + "\n  ".join(wait_lines))
+    ctx_parts.append(f"- Sampel alasan Promoter (verbatim): {pc}")
+    ctx_parts.append(f"- Sampel alasan Detractor (verbatim): {dc}")
+    ctx_parts.append("\nCatatan: hanya cabang dengan N≥10 responden yang ditampilkan di ranking cabang, karena cabang dengan sampel lebih kecil rata-ratanya kurang stabil secara statistik. Bila ditanya cabang spesifik yang tidak tercantum, sampaikan bahwa data rinci cabang tersebut tidak tersedia dalam ringkasan ini.")
+    return "\n".join(ctx_parts)
 
 def call_ai(msgs, ctx):
     try:
@@ -440,8 +538,16 @@ def call_ai(msgs, ctx):
         if not api_key: return "GROQ_API_KEY belum dikonfigurasi di Streamlit Secrets."
         from groq import Groq
         client = Groq(api_key=api_key)
-        sys_p = ("Kamu adalah analis Customer Experience (CX) senior ahli perbankan Indonesia. Analisis data survei kepuasan nasabah Bank XYZ dan berikan insight actionable. Jawab dalam Bahasa Indonesia profesional. Sertakan angka spesifik dari data. Format: maksimal 4 paragraf pendek, langsung ke point.\n\n" f"Konteks data:\n{ctx}")
-        response = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role":"system","content":sys_p}] + msgs, max_tokens=800, temperature=0.7)
+        sys_p = ("Kamu adalah analis Customer Experience (CX) senior ahli perbankan Indonesia. "
+            "Analisis data survei kepuasan nasabah Bank XYZ di bawah dan berikan insight actionable. "
+            "Jawab dalam Bahasa Indonesia profesional. Format: maksimal 4 paragraf pendek, langsung ke point.\n\n"
+            "ATURAN PENTING:\n"
+            "1. HANYA gunakan angka yang ada di KONTEKS DATA di bawah. Jangan mengarang atau menebak angka yang tidak tercantum.\n"
+            "2. Jika ditanya sesuatu yang datanya tidak ada di konteks (misal cabang spesifik yang tidak tercantum di Top/Bottom 5), katakan dengan jujur bahwa data rinci itu tidak tersedia dalam ringkasan saat ini — jangan mengarang jawaban.\n"
+            "3. Manfaatkan breakdown provinsi, demografi, dan waktu tunggu di konteks bila pertanyaan relevan dengan itu, jangan hanya mengulang angka NPS/Kepuasan/Loyalitas global.\n"
+            "4. Sebutkan N (jumlah responden) yang relevan saat menyebut suatu angka, terutama bila N kecil sehingga butuh kehati-hatian interpretasi.\n\n"
+            f"KONTEKS DATA:\n{ctx}")
+        response = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role":"system","content":sys_p}] + msgs, max_tokens=900, temperature=0.4)
         return response.choices[0].message.content
     except Exception as e: return f"Gagal menghubungi AI: {str(e)}"
 
@@ -625,7 +731,7 @@ with t2:
     with dc1: sel_dim=st.selectbox("Dimensi:",key="sb_dim2",options=list(DM.keys()))
     with dc2: dm2=st.radio("Tampilan:",["Bar Chart","Scatter IPA"],horizontal=True,key="rd_dm2")
     with dc3:
-        sel_c2=st.selectbox("Filter Cabang:",key="sb_c2", options=["Semua"]+sorted(df['CABANG'].dropna().unique().tolist()))
+        sel_c2=st.selectbox("Filter Cabang:",key="sb_c2", options=["Semua"]+sorted(df['CABANG'].dropna().unique().tolist()), help="💡 Ketik nama cabang untuk mencari.")
 
     dfd=df if sel_c2=="Semua" else df[df['CABANG']==sel_c2]
     dfdk=df_hk if sel_c2=="Semua" else df_hk[df_hk['CABANG']==sel_c2]
@@ -682,7 +788,7 @@ with t2:
             fi2.add_vline(x=ms2,line_dash="dash",line_color=border_col)
             fi2.add_hline(y=mi2,line_dash="dash",line_color=border_col)
             fi2.update_layout(height=560)
-            st.plotly_chart(elo(fi2,f"IPA Matrix — {sel_dim} (N={n_dfd:,})"),use_container_width=True)
+            st.plotly_chart(elo(fi2,f"IPA Matrix — {sel_dim} (N={n_dfd:,})",legend_below=True),use_container_width=True)
 
             sh("Prioritas per Kuadran")
             qcols=st.columns(5)
@@ -704,7 +810,7 @@ with t2:
             fw=px.bar(wd,x='Metrik',y='Menit',color='Metrik',text='Menit', color_discrete_map={'Aktual (mean)':C_KOMP,'Aktual (median)':'#F59E0B','Toleransi':C_XYZ})
             fw.update_traces(texttemplate='%{y:.1f} mnt',textposition='outside', hovertemplate='<b>%{x}</b><br>%{y:.2f} menit<br>' f'Berdasarkan {len(dft2):,} responden Teller<extra></extra>')
             fw.update_yaxes(range=[0,dft2['TL6'].mean()*1.7])
-            st.plotly_chart(elo(fw,f"Teller: Aktual vs Toleransi (N={len(dft2):,})"),use_container_width=True)
+            st.plotly_chart(elo(fw,f"Teller: Aktual vs Toleransi (N={len(dft2):,})",legend_below=True),use_container_width=True)
             gap_mm=dft2['TL5'].mean()-dft2['TL5'].median()
             ib(f"Teller: **{dft2['TL5'].mean():.1f} mnt** rata-rata (median {dft2['TL5'].median():.1f} mnt, toleransi {dft2['TL6'].mean():.1f} mnt, N={len(dft2):,})." + (f" Selisih mean-median {gap_mm:.1f} mnt mengindikasikan ada outlier waktu tunggu yang menarik rata-rata ke atas." if gap_mm>2 else ""))
     with wt2:
@@ -714,17 +820,34 @@ with t2:
             fw2=px.bar(wd2,x='Metrik',y='Menit',color='Metrik',text='Menit', color_discrete_map={'Aktual (mean)':C_KOMP,'Aktual (median)':'#F59E0B','Toleransi':C_XYZ})
             fw2.update_traces(texttemplate='%{y:.1f} mnt',textposition='outside', hovertemplate='<b>%{x}</b><br>%{y:.2f} menit<br>' f'Berdasarkan {len(dfc2):,} responden CS<extra></extra>')
             fw2.update_yaxes(range=[0,dfc2['CS6'].mean()*1.7])
-            st.plotly_chart(elo(fw2,f"CS: Aktual vs Toleransi (N={len(dfc2):,})"),use_container_width=True)
+            st.plotly_chart(elo(fw2,f"CS: Aktual vs Toleransi (N={len(dfc2):,})",legend_below=True),use_container_width=True)
     with wt3:
-        jt=df['TL1'].dropna().value_counts().reset_index(); jt.columns=['Jam','Teller']
-        jc=df['CS1'].dropna().value_counts().reset_index(); jc.columns=['Jam','CS']
+        JAM_LABEL_SHORT={
+            'Pagi hari jam 8.00 - 10.00':'08:00-10:00',
+            'Pagi hari jam 10.00 - 12.00':'10:00-12:00',
+            'Pada saat jam makan siang jam 12.00 - 13.00':'12:00-13:00',
+            'Pada siang hari jam 13.00-14.00':'13:00-14:00',
+            'Sore hari jam 14.00-15.00':'14:00-15:00',
+        }
+        JAM_ORDER=list(JAM_LABEL_SHORT.values())
+        jam_excl={'tidak mengisi','tidak ada','-','n/a','na',''}
+        tl1_valid=df['TL1'].dropna()[~df['TL1'].dropna().str.strip().str.lower().isin(jam_excl)]
+        cs1_valid=df['CS1'].dropna()[~df['CS1'].dropna().str.strip().str.lower().isin(jam_excl)]
+        jt=tl1_valid.value_counts().reset_index(); jt.columns=['Jam','Teller']
+        jc=cs1_valid.value_counts().reset_index(); jc.columns=['Jam','CS']
         jd=pd.merge(jt,jc,on='Jam',how='outer').fillna(0)
+        jd['Jam_Short']=jd['Jam'].map(JAM_LABEL_SHORT).fillna(jd['Jam'])
+        jd['_ord']=jd['Jam_Short'].apply(lambda x: JAM_ORDER.index(x) if x in JAM_ORDER else 99)
+        jd=jd.sort_values('_ord')
         fj=go.Figure()
-        fj.add_trace(go.Bar(name='Teller',x=jd['Jam'],y=jd['Teller'],marker_color=C_XYZ, hovertemplate='<b>%{x}</b><br>Teller: %{y:.0f} responden<extra></extra>'))
-        fj.add_trace(go.Bar(name='CS',x=jd['Jam'],y=jd['CS'],marker_color=C_KOMP, hovertemplate='<b>%{x}</b><br>CS: %{y:.0f} responden<extra></extra>'))
-        fj.update_layout(barmode='group',xaxis_tickangle=-25,height=300)
+        fj.add_trace(go.Bar(name='Teller',x=jd['Jam_Short'],y=jd['Teller'],marker_color=C_XYZ, customdata=jd['Jam'], hovertemplate='<b>%{customdata}</b><br>Teller: %{y:.0f} responden<extra></extra>'))
+        fj.add_trace(go.Bar(name='CS',x=jd['Jam_Short'],y=jd['CS'],marker_color=C_KOMP, customdata=jd['Jam'], hovertemplate='<b>%{customdata}</b><br>CS: %{y:.0f} responden<extra></extra>'))
+        fj.update_layout(barmode='group',xaxis_tickangle=-20,height=300)
         st.plotly_chart(elo(fj,"Distribusi Jam Sibuk"),use_container_width=True)
-        if len(jt)>0: ib(f"Jam paling sibuk Teller: **{jt.iloc[0]['Jam']}** ({jt.iloc[0]['Teller']:.0f} responden).")
+        if len(jt)>0:
+            top_jam=jt.iloc[0]
+            top_jam_short=JAM_LABEL_SHORT.get(top_jam['Jam'],top_jam['Jam'])
+            ib(f"Jam paling sibuk Teller: **{top_jam_short}** ({top_jam['Teller']:.0f} responden).")
 
     sh("Waktu Tunggu per Cabang")
     wtp=st.radio("Panel:",["Teller","CS"],horizontal=True,key="rd_wtp2")
@@ -799,7 +922,7 @@ with t3:
     fib.add_vline(x=sb2_v,line_dash="dash",line_color=border_col)
     fib.add_hline(y=mb,line_dash="dash",line_color=border_col)
     fib.update_layout(height=600)
-    st.plotly_chart(elo(fib,f"IPA Matrix Brand (N={len(df):,})"),use_container_width=True)
+    st.plotly_chart(elo(fib,f"IPA Matrix Brand (N={len(df):,})",legend_below=True),use_container_width=True)
     
     qcols_b=st.columns(5)
     for col_q,qn,qcv in zip(qcols_b, ["Perbaiki","Pertahankan","Rendah","Berlebihan","Netral"], [C_KOMP,"#10B981",C_IMP,"#F59E0B","#9CA3AF"]):
@@ -855,7 +978,7 @@ with t4:
     tc1,tc2,tc3=st.columns(3)
     with tc1: sel_tp=st.selectbox("Touchpoint:",key="sb_tp4",options=list(DM.keys()))
     with tc2: tpv=st.radio("Tampilan:",["IPA Scatter","Bar"],horizontal=True,key="rd_tp4")
-    with tc3: tpc=st.selectbox("Filter Cabang:",key="sb_tpc4", options=["Semua"]+sorted(df['CABANG'].unique().tolist()))
+    with tc3: tpc=st.selectbox("Filter Cabang:",key="sb_tpc4", options=["Semua"]+sorted(df['CABANG'].unique().tolist()), help="💡 Ketik nama cabang untuk mencari.")
 
     dft4=df if tpc=="Semua" else df[df['CABANG']==tpc]
     dftk4=df_hk if tpc=="Semua" else df_hk[df_hk['CABANG']==tpc]
@@ -894,7 +1017,7 @@ with t4:
             fi4.add_vline(x=ms4,line_dash="dash",line_color=border_col)
             fi4.add_hline(y=mi4,line_dash="dash",line_color=border_col)
             fi4.update_layout(height=560)
-            st.plotly_chart(elo(fi4,f"IPA — {sel_tp} (N={n_dft4:,})"),use_container_width=True)
+            st.plotly_chart(elo(fi4,f"IPA — {sel_tp} (N={n_dft4:,})",legend_below=True),use_container_width=True)
 
             sh("Prioritas per Kuadran")
             qcols4=st.columns(5)
@@ -999,16 +1122,15 @@ with t5:
         customdata_cce=np.dstack([p_mat5.values, n_mat5.values])
         fec.update_traces(customdata=customdata_cce, hovertemplate='<b>%{x}</b> vs <b>%{y}</b><br>r = %{z:.3f}<br>' + ('p-value: %{customdata[0]:.4f}<br>' if SCIPY_OK else '') + 'N (pairwise): %{customdata[1]:.0f}<extra></extra>')
         st.plotly_chart(elo(fec,h=340),use_container_width=True)
+
     with e_c2:
-        s1df=df[['G1A','G1A_CAT']].copy(); s1df['Emosi Pos']=epas
-        fs1=px.scatter(s1df,x='Emosi Pos',y='G1A',color='G1A_CAT',color_discrete_map=NPS_C, trendline='ols',opacity=0.5,labels={'G1A':'NPS Score'})
-        fs1.update_traces(hovertemplate='Emosi Pos: %{x:.2f}<br>NPS: %{y:.1f}<extra></extra>',selector=dict(mode='markers'))
-        st.plotly_chart(elo(fs1,f"Emosi Positif vs NPS (N={len(df):,})",340),use_container_width=True)
+        fs1, r1, n1 = scatter_ols_manual(pd.DataFrame({'Emosi Pos':epas,'G1A':df['G1A'],'G1A_CAT':df['G1A_CAT']}), 'Emosi Pos','G1A','Emosi Pos','NPS Score')
+        st.plotly_chart(elo(fs1,f"Emosi Positif vs NPS (N={n1:,})",340,legend_below=True),use_container_width=True)
+        if r1: st.caption(f"r={r1[0]:.2f}, p={r1[1]:.4f}. Titik digeser tipis (jitter) agar mudah dibaca — NPS aslinya skala diskrit 4-10, bukan kontinu, jadi garis OLS ini gambaran arah hubungan, bukan prediksi presisi.")
     with e_c3:
-        s2df=df[['F1A','G1A_CAT']].copy(); s2df['Emosi Pos']=epas
-        fs2=px.scatter(s2df,x='Emosi Pos',y='F1A',color='G1A_CAT',color_discrete_map=NPS_C, trendline='ols',opacity=0.5,labels={'F1A':'Loyalitas Nasabah'})
-        fs2.update_traces(hovertemplate='Emosi Pos: %{x:.2f}<br>Loyalitas: %{y:.2f}<extra></extra>',selector=dict(mode='markers'))
-        st.plotly_chart(elo(fs2,f"Emosi Positif vs Loyalitas (N={len(df):,})",340),use_container_width=True)
+        fs2, r2, n2 = scatter_ols_manual(pd.DataFrame({'Emosi Pos':epas,'F1A':df['F1A'],'G1A_CAT':df['G1A_CAT']}), 'Emosi Pos','F1A','Emosi Pos','Loyalitas Nasabah')
+        st.plotly_chart(elo(fs2,f"Emosi Positif vs Loyalitas (N={n2:,})",340,legend_below=True),use_container_width=True)
+        if r2: st.caption(f"r={r2[0]:.2f}, p={r2[1]:.4f}. Titik digeser tipis (jitter) agar mudah dibaca — Loyalitas aslinya hanya berskala 4-6 (3 nilai), jadi garis OLS ini gambaran arah hubungan, bukan prediksi presisi.")
 
 # ═══════════════════════════════════════════════════════
 # TAB 6 — DIGITALISASI
@@ -1049,10 +1171,9 @@ with t6:
         st.plotly_chart(elo(fsl,"Ketersediaan & Fungsi Sarana"),use_container_width=True)
     with sl2:
         if "T_J1_1" in df.columns:
-            scd=df[['T_J1_1','E1A','G1A_CAT']].dropna()
-            fds=px.scatter(scd,x='T_J1_1',y='E1A',color='G1A_CAT',color_discrete_map=NPS_C, trendline='ols',opacity=0.5, labels={'T_J1_1':'Persepsi Digitalisasi','E1A':'Kepuasan Nasabah'})
-            fds.update_traces(hovertemplate='Digitalisasi: %{x:.2f}<br>Kepuasan: %{y:.2f}<extra></extra>',selector=dict(mode='markers'))
-            st.plotly_chart(elo(fds,f"Digitalisasi vs Kepuasan (N={len(scd):,})", 420),use_container_width=True)
+            fds, r_ds, n_ds = scatter_ols_manual(df[['T_J1_1','E1A','G1A_CAT']].rename(columns={'T_J1_1':'Digitalisasi'}), 'Digitalisasi','E1A','Persepsi Digitalisasi','Kepuasan Nasabah')
+            st.plotly_chart(elo(fds,f"Digitalisasi vs Kepuasan (N={n_ds:,})", 420),use_container_width=True)
+            if r_ds: st.caption(f"r={r_ds[0]:.2f}, p={r_ds[1]:.4f}. Titik digeser tipis (jitter) agar mudah dibaca — Kepuasan berskala diskrit, garis OLS ini gambaran arah hubungan.")
 
     sh("E-Form & Awareness")
     ef1,ef2=st.columns(2)
@@ -1139,7 +1260,7 @@ with t7:
             fpc=px.scatter(df_pca,x='PC1',y='PC2', color=color_col,color_discrete_map=color_d, symbol='Cluster',opacity=0.7, labels={'PC1':f'Komponen Utama 1 ({var1*100:.1f}% variansi)', 'PC2':f'Komponen Utama 2 ({var2*100:.1f}% variansi)'})
             fpc.update_traces(marker=dict(size=8), customdata=df_pca[cd_exist].values, hovertemplate=('<b>%{customdata[0]}</b><br>Provinsi: %{customdata[1]}<br>NPS Score: %{customdata[2]:.1f}<br>Kepuasan: %{customdata[3]:.2f}<br>Loyalitas: %{customdata[4]:.2f}<br>Kategori NPS: %{customdata[5]}<br>Cluster: %{customdata[6]}<extra></extra>'))
             fpc.update_layout(height=500)
-            st.plotly_chart(elo(fpc, f"Visualisasi Cluster 2D — Variansi Terjelaskan: {(var1+var2)*100:.1f}% (N={len(df_pca):,})"), use_container_width=True)
+            st.plotly_chart(elo(fpc, f"Visualisasi Cluster 2D — Variansi Terjelaskan: {(var1+var2)*100:.1f}% (N={len(df_pca):,})",legend_below=True), use_container_width=True)
 
             sh("Profil Rata-rata per Cluster")
             prof_cols=[c for c in feat_cols if c in df_pca.columns]
@@ -1162,7 +1283,7 @@ with t7:
                     n_cl_resp=len(df_pca[df_pca['Cluster']==cl_name])
                     fig_cl_r.add_trace(go.Scatterpolar(r=cl_data,theta=theta_labels,fill='toself', name=f'Cluster {cl_name} (N={n_cl_resp})', line_color=cl_colors_r[ci%len(cl_colors_r)], hovertemplate='<b>%{theta}</b><br>Rata-rata: %{r:.2f}<extra></extra>'))
                 fig_cl_r.update_layout(polar=dict(bgcolor=BG, radialaxis=dict(visible=True,gridcolor=GRID, tickfont=dict(color=text_muted,size=10)), angularaxis=dict(tickfont=dict(color=text_main,size=12))), height=520,margin=dict(t=40,b=60,l=60,r=60))
-                st.plotly_chart(elo(fig_cl_r,"Radar Profil per Cluster"), use_container_width=True)
+                st.plotly_chart(elo(fig_cl_r,"Radar Profil per Cluster",legend_below=True), use_container_width=True)
 
             sh("Distribusi Kategori NPS per Cluster")
             nps_cl=df_pca.groupby(['Cluster','G1A_CAT']).size().reset_index(name='Jumlah')
@@ -1295,13 +1416,13 @@ with t9:
         fnh=px.histogram(df,x='G1A',nbins=11,color='G1A_CAT',color_discrete_map=NPS_C, labels={'G1A':'NPS Score XYZ','count':'Jumlah Responden'})
         fnh.update_layout(bargap=0.08, height=400)
         fnh.update_traces(hovertemplate='NPS Score: %{x}<br>Jumlah responden: %{y}<extra></extra>')
-        st.plotly_chart(elo(fnh,f"Distribusi NPS Score XYZ (N={n9:,})"),use_container_width=True)
+        st.plotly_chart(elo(fnh,f"Distribusi NPS Score XYZ (N={n9:,})",legend_below=True),use_container_width=True)
     with vh2:
         if len(df_hk)>0:
             fnhk=px.histogram(df_hk,x='G1C',nbins=11,color='G1C_CAT',color_discrete_map=NPS_C, labels={'G1C':f'NPS Score {target_komp}','count':'Jumlah Responden'})
             fnhk.update_layout(bargap=0.08, height=400)
             fnhk.update_traces(hovertemplate='NPS Score: %{x}<br>Jumlah responden: %{y}<extra></extra>')
-            st.plotly_chart(elo(fnhk,f"Distribusi NPS Score {target_komp} (N={len(df_hk):,})"),use_container_width=True)
+            st.plotly_chart(elo(fnhk,f"Distribusi NPS Score {target_komp} (N={len(df_hk):,})",legend_below=True),use_container_width=True)
 
     sh("Analisis Teks & Wordcloud")
     wf1,wf2,wf3=st.columns(3)
@@ -1398,16 +1519,17 @@ with t10:
     <div style='color:{accent_color}!important; font-size:15px; font-weight:800; margin-bottom:10px'>
     Cara Menggunakan AI Assistant</div>
     <div style='color:{text_main}!important; font-size:14px; line-height:1.8'>
-    AI menjawab berdasarkan data aktual sesuai filter aktif saat ini.<br>
-    Contoh: <i>"Apa kelemahan utama XYZ?"</i> · <i>"Cabang mana yang paling perlu diperhatikan?"</i> · 
-    <i>"Mengapa nasabah jadi Detractor?"</i>
+    AI menjawab berdasarkan data aktual sesuai filter aktif saat ini, termasuk breakdown per provinsi, demografi, dan waktu tunggu.<br>
+    Contoh: <i>"Apa kelemahan utama XYZ?"</i> · <i>"Provinsi mana NPS-nya paling rendah?"</i> · 
+    <i>"Mengapa nasabah jadi Detractor?"</i><br>
+    <span style='font-size:12px;color:{text_muted}'>Catatan: AI hanya menjawab dari ringkasan data yang tersedia — untuk cabang/segmen yang sangat spesifik dan tidak tercakup di ringkasan, AI akan menyampaikan bila datanya tidak tersedia.</span>
     </div></div>""", unsafe_allow_html=True)
 
     ctx=build_ctx(df,df_hk)
     if "chat_history" not in st.session_state: st.session_state.chat_history=[]
 
     st.markdown(f"<div style='color:{text_muted}!important; font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; margin-bottom:12px'>Pertanyaan Cepat</div>", unsafe_allow_html=True)
-    qq=["Apa kelemahan utama XYZ vs kompetitor?","Cabang mana yang perlu paling diperhatikan?", "Faktor apa yang paling mendorong Promoter?","Mengapa nasabah menjadi Detractor?"]
+    qq=["Apa kelemahan utama XYZ vs kompetitor?","Cabang mana yang perlu paling diperhatikan?", "Provinsi mana dengan NPS terendah dan kenapa?","Apakah ada perbedaan kepuasan antar segmen usia?"]
     qc=st.columns(4)
     for i,(cq,qt) in enumerate(zip(qc,qq)):
         if cq.button(qt,key=f"qq_{i}"):
